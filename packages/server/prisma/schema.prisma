@@ -1,0 +1,266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// MULTI-TENANT & AUTH
+// ============================================
+
+model Tenant {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  settings  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  users     User[]
+  filieres  Filiere[]
+  clients   Client[]
+
+  @@map("tenants")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String   @map("first_name")
+  lastName     String   @map("last_name")
+  role         Role     @default(COMMERCIAL)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  tenantId     String   @map("tenant_id")
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+
+  filiereId    String?  @unique @map("filiere_id")
+  filiere      Filiere? @relation("ResponsableFiliere", fields: [filiereId], references: [id])
+
+  clients      Client[] @relation("CommercialClients")
+  notes        Note[]
+  visits       Visit[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+enum Role {
+  ADMIN
+  RESPONSABLE_FILIERE
+  COMMERCIAL
+  QUALITE
+  DISTRIBUTEUR
+}
+
+// ============================================
+// ORGANISATION
+// ============================================
+
+model Filiere {
+  id        String   @id @default(uuid())
+  name      String
+  code      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  tenantId  String   @map("tenant_id")
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+
+  responsable User?  @relation("ResponsableFiliere")
+  clients     Client[]
+
+  @@unique([tenantId, code])
+  @@map("filieres")
+}
+
+// ============================================
+// CLIENTS (DISTRIBUTEURS)
+// ============================================
+
+model Client {
+  id          String   @id @default(uuid())
+  name        String
+  address     String?
+  city        String?
+  postalCode  String?  @map("postal_code")
+  country     String   @default("France")
+  phone       String?
+  email       String?
+  latitude    Float?
+  longitude   Float?
+  isActive    Boolean  @default(true) @map("is_active")
+  deletedAt   DateTime? @map("deleted_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tenantId    String   @map("tenant_id")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  filiereId   String?  @map("filiere_id")
+  filiere     Filiere? @relation(fields: [filiereId], references: [id])
+
+  commercialId String? @map("commercial_id")
+  commercial   User?   @relation("CommercialClients", fields: [commercialId], references: [id])
+
+  notes       Note[]
+  visits      Visit[]
+  lots        LotClient[]
+  orders      Order[]
+
+  @@map("clients")
+}
+
+// ============================================
+// VISITES & NOTES
+// ============================================
+
+model Visit {
+  id        String   @id @default(uuid())
+  date      DateTime
+  subject   String?
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  clientId  String   @map("client_id")
+  client    Client   @relation(fields: [clientId], references: [id])
+
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+
+  photos    Photo[]
+
+  @@map("visits")
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  clientId  String   @map("client_id")
+  client    Client   @relation(fields: [clientId], references: [id])
+
+  authorId  String   @map("author_id")
+  author    User     @relation(fields: [authorId], references: [id])
+
+  @@map("notes")
+}
+
+model Photo {
+  id        String   @id @default(uuid())
+  url       String
+  caption   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  visitId   String   @map("visit_id")
+  visit     Visit    @relation(fields: [visitId], references: [id])
+
+  @@map("photos")
+}
+
+// ============================================
+// TRAÇABILITÉ GS1.128
+// ============================================
+
+model Product {
+  id        String   @id @default(uuid())
+  gtin      String   @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  lots      Lot[]
+
+  @@map("products")
+}
+
+model Lot {
+  id            String   @id @default(uuid())
+  lotNumber     String   @map("lot_number")
+  expirationDate DateTime? @map("expiration_date")
+  rawBarcode    String?  @map("raw_barcode")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  productId     String   @map("product_id")
+  product       Product  @relation(fields: [productId], references: [id])
+
+  clients       LotClient[]
+
+  @@unique([productId, lotNumber])
+  @@map("lots")
+}
+
+model LotClient {
+  id           String   @id @default(uuid())
+  quantity     Int      @default(1)
+  deliveryDate DateTime @map("delivery_date")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  lotId        String   @map("lot_id")
+  lot          Lot      @relation(fields: [lotId], references: [id])
+
+  clientId     String   @map("client_id")
+  client       Client   @relation(fields: [clientId], references: [id])
+
+  @@map("lot_clients")
+}
+
+// ============================================
+// COMMANDES
+// ============================================
+
+model Order {
+  id        String      @id @default(uuid())
+  reference String      @unique
+  status    OrderStatus @default(PENDING)
+  total     Float       @default(0)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  clientId  String      @map("client_id")
+  client    Client      @relation(fields: [clientId], references: [id])
+
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+// ============================================
+// AUDIT LOG (IMMUTABLE)
+// ============================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  userId     String?  @map("user_id")
+  user       User?    @relation(fields: [userId], references: [id])
+
+  tenantId   String   @map("tenant_id")
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

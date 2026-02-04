@@ -1,0 +1,26 @@
+{
+  "name": "cdiagvet",
+  "version": "0.1.0",
+  "description": "CRM Diagnostics Vétérinaires - Gestion commerciale et traçabilité GS1.128",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:server": "npm run dev --workspace=@cdiagvet/server",
+    "dev:front": "npm run dev --workspace=@cdiagvet/front",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "db:migrate": "npm run db:migrate --workspace=@cdiagvet/server",
+    "db:seed": "npm run db:seed --workspace=@cdiagvet/server"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "author": "Gille",
+  "license": "UNLICENSED"
+}
