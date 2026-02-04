@@ -60,7 +60,7 @@ export default function PhotosSection({ clientId }: PhotosSectionProps) {
       const formData = new FormData();
       formData.append('file', file);
 
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('accessToken');
       const response = await fetch('http://localhost:3000/uploads', {
         method: 'POST',
         headers: {

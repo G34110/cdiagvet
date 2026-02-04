@@ -1,6 +1,6 @@
 import { useQuery } from '@apollo/client';
 import { Link } from 'react-router-dom';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { MY_CLIENTS_QUERY, CLIENT_STATS_QUERY, FILIERES_QUERY } from '../graphql/clients';
 
@@ -88,9 +88,14 @@ export default function ClientsPage() {
 
       <header className="page-header">
         <h1>Mes Clients</h1>
-        <Link to="/clients/new" className="btn-primary">
-          <Plus size={20} /> Nouveau client
-        </Link>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <Link to="/clients/import" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Upload size={18} /> Importer
+          </Link>
+          <Link to="/clients/new" className="btn-primary">
+            <Plus size={20} /> Nouveau client
+          </Link>
+        </div>
       </header>
 
       <div className="search-bar">

@@ -9,6 +9,7 @@ import ClientDetailPage from './pages/ClientDetailPage';
 import NewClientPage from './pages/NewClientPage';
 import CalendarPage from './pages/CalendarPage';
 import MapPage from './pages/MapPage';
+import ImportClientsPage from './pages/ImportClientsPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const auth = useRecoilValue(authState);
@@ -31,6 +32,7 @@ function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="clients" element={<ClientsPage />} />
         <Route path="clients/new" element={<NewClientPage />} />
+        <Route path="clients/import" element={<ImportClientsPage />} />
         <Route path="clients/:id" element={<ClientDetailPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="map" element={<MapPage />} />

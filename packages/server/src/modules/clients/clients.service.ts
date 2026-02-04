@@ -250,4 +250,15 @@ export class ClientsService {
 
     return { total, active, inactive: total - active, byFiliere };
   }
+
+  async getFiliereIdsByNames(names: string[], tenantId: string): Promise<string[]> {
+    const filieres = await this.prisma.filiere.findMany({
+      where: {
+        tenantId,
+        name: { in: names, mode: 'insensitive' },
+      },
+      select: { id: true },
+    });
+    return filieres.map((f: { id: string }) => f.id);
+  }
 }
