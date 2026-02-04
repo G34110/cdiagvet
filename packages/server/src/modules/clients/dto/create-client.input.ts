@@ -25,7 +25,7 @@ export class CreateClientInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  @IsEmail()
+  @IsEmail({}, { message: 'Email invalide' })
   email?: string;
 
   @Field({ nullable: true })

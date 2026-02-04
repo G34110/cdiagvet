@@ -1,31 +1,48 @@
-import { useQuery, gql } from '@apollo/client';
+import { useQuery } from '@apollo/client';
 import { Link } from 'react-router-dom';
 import { Plus, Search } from 'lucide-react';
 import { useState } from 'react';
+import { MY_CLIENTS_QUERY, CLIENT_STATS_QUERY } from '../graphql/clients';
 
-const MY_CLIENTS_QUERY = gql`
-  query MyClients {
-    myClients {
-      id
-      name
-      city
-      phone
-      email
-      isActive
-    }
-  }
-`;
+interface Client {
+  id: string;
+  name: string;
+  city?: string;
+  phone?: string;
+  email?: string;
+  isActive: boolean;
+  filiere?: { id: string; name: string };
+}
 
 export default function ClientsPage() {
   const [search, setSearch] = useState('');
-  const { data, loading, error } = useQuery(MY_CLIENTS_QUERY);
+  const { data, loading, error } = useQuery(MY_CLIENTS_QUERY, {
+    variables: { filter: search ? { search } : null },
+  });
+  const { data: statsData } = useQuery(CLIENT_STATS_QUERY);
 
-  const clients = data?.myClients?.filter((client: { name: string }) =>
-    client.name.toLowerCase().includes(search.toLowerCase())
-  ) || [];
+  const clients: Client[] = data?.myClients || [];
+  const stats = statsData?.clientStats;
 
   return (
     <div className="clients-page">
+      {stats && (
+        <div className="stats-bar">
+          <div className="stat-item">
+            <span className="stat-value">{stats.total}</span>
+            <span className="stat-label">Total</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">{stats.active}</span>
+            <span className="stat-label">Actifs</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-value">{stats.inactive}</span>
+            <span className="stat-label">Inactifs</span>
+          </div>
+        </div>
+      )}
+
       <header className="page-header">
         <h1>Mes Clients</h1>
         <Link to="/clients/new" className="btn-primary">
@@ -52,14 +69,18 @@ export default function ClientsPage() {
             <p>Aucun client trouvé</p>
           </div>
         )}
-        {clients.map((client: { id: string; name: string; city?: string; phone?: string }) => (
+        {clients.map((client) => (
           <Link key={client.id} to={`/clients/${client.id}`} className="client-card">
             <div className="client-info">
               <h3>{client.name}</h3>
               <p>{client.city || 'Ville non renseignée'}</p>
+              {client.filiere && (
+                <span className="filiere-badge">{client.filiere.name}</span>
+              )}
             </div>
             <div className="client-contact">
               {client.phone && <span>{client.phone}</span>}
+              <span className={`status-dot ${client.isActive ? 'active' : 'inactive'}`} />
             </div>
           </Link>
         ))}

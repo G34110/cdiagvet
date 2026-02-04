@@ -10,9 +10,13 @@ type AuthPayload {
 type Client {
   address: String
   city: String
+  commercial: User
+  commercialId: String
   country: String!
   createdAt: DateTime!
   email: String
+  filiere: Filiere
+  filiereId: String
   id: ID!
   isActive: Boolean!
   latitude: Float
@@ -21,6 +25,35 @@ type Client {
   phone: String
   postalCode: String
   updatedAt: DateTime!
+}
+
+type ClientMapItem {
+  address: String
+  city: String
+  id: String!
+  latitude: Float!
+  longitude: Float!
+  name: String!
+}
+
+type ClientStats {
+  active: Int!
+  inactive: Int!
+  total: Int!
+}
+
+input ClientsFilterInput {
+  city: String
+  filiereId: String
+  isActive: Boolean
+  search: String
+  skip: Int = 0
+  take: Int = 50
+}
+
+type ClientsResponse {
+  clients: [Client!]!
+  total: Int!
 }
 
 input CreateClientInput {
@@ -33,10 +66,23 @@ input CreateClientInput {
   postalCode: String
 }
 
+input CreateVisitInput {
+  clientId: String!
+  date: String!
+  notes: String
+  subject: String
+}
+
 """
 A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
 """
 scalar DateTime
+
+type Filiere {
+  description: String
+  id: ID!
+  name: String!
+}
 
 input LoginInput {
   email: String!
@@ -45,13 +91,46 @@ input LoginInput {
 
 type Mutation {
   createClient(input: CreateClientInput!): Client!
+  createVisit(input: CreateVisitInput!): Visit!
+  deleteClient(id: String!): Client!
+  deleteVisit(id: String!): Visit!
   login(input: LoginInput!): AuthPayload!
+  updateClient(id: String!, input: UpdateClientInput!): Client!
+  updateVisit(id: String!, input: UpdateVisitInput!): Visit!
 }
 
 type Query {
-  client(id: String!): Client
+  client(id: String!): Client!
+  clientStats: ClientStats!
+  clientVisits(clientId: String!): [Visit!]!
+  clients(filter: ClientsFilterInput): ClientsResponse!
+  clientsForMap: [ClientMapItem!]!
   me: User!
-  myClients: [Client!]!
+  myClients(filter: ClientsFilterInput): [Client!]!
+  myVisits(filter: VisitsFilterInput): [Visit!]!
+  todayVisits: [Visit!]!
+  upcomingVisits(days: Int = 7): [Visit!]!
+  visit(id: String!): Visit!
+}
+
+input UpdateClientInput {
+  address: String
+  city: String
+  email: String
+  filiereId: String
+  isActive: Boolean
+  latitude: Float
+  longitude: Float
+  name: String
+  phone: String
+  postalCode: String
+}
+
+input UpdateVisitInput {
+  clientId: String
+  date: String
+  notes: String
+  subject: String
 }
 
 type User {
@@ -71,4 +150,31 @@ type UserPayload {
   id: String!
   lastName: String!
   role: String!
+}
+
+type Visit {
+  client: Client
+  clientId: String!
+  createdAt: DateTime!
+  date: DateTime!
+  id: ID!
+  notes: String
+  subject: String
+  updatedAt: DateTime!
+  user: VisitUser
+  userId: String!
+}
+
+type VisitUser {
+  firstName: String!
+  id: ID!
+  lastName: String!
+}
+
+input VisitsFilterInput {
+  clientId: String
+  endDate: String
+  skip: Int
+  startDate: String
+  take: Int
 }

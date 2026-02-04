@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import ClientDetailPage from './pages/ClientDetailPage';
+import NewClientPage from './pages/NewClientPage';
 import CalendarPage from './pages/CalendarPage';
 import MapPage from './pages/MapPage';
 
@@ -29,6 +30,7 @@ function App() {
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="clients" element={<ClientsPage />} />
+        <Route path="clients/new" element={<NewClientPage />} />
         <Route path="clients/:id" element={<ClientDetailPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="map" element={<MapPage />} />

@@ -5,6 +5,9 @@ import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { Client } from './entities/client.entity';
 import { CreateClientInput } from './dto/create-client.input';
+import { UpdateClientInput } from './dto/update-client.input';
+import { ClientsFilterInput } from './dto/clients-filter.input';
+import { ClientsResponse, ClientStats, ClientMapItem } from './dto/clients-response';
 
 @Resolver(() => Client)
 export class ClientsResolver {
@@ -19,15 +22,61 @@ export class ClientsResolver {
     return this.clientsService.create(input, user.tenantId, user.id);
   }
 
-  @Query(() => [Client])
+  @Mutation(() => Client)
   @UseGuards(GqlAuthGuard)
-  async myClients(@CurrentUser() user: { id: string }) {
-    return this.clientsService.findByCommercial(user.id);
+  async updateClient(
+    @Args('id', { type: () => String }) id: string,
+    @Args('input') input: UpdateClientInput,
+    @CurrentUser() user: { tenantId: string },
+  ) {
+    return this.clientsService.update(id, user.tenantId, input);
   }
 
-  @Query(() => Client, { nullable: true })
+  @Mutation(() => Client)
   @UseGuards(GqlAuthGuard)
-  async client(@Args('id') id: string) {
-    return this.clientsService.findById(id);
+  async deleteClient(
+    @Args('id', { type: () => String }) id: string,
+    @CurrentUser() user: { tenantId: string },
+  ) {
+    return this.clientsService.softDelete(id, user.tenantId);
+  }
+
+  @Query(() => ClientsResponse)
+  @UseGuards(GqlAuthGuard)
+  async clients(
+    @Args('filter', { nullable: true }) filter: ClientsFilterInput,
+    @CurrentUser() user: { tenantId: string },
+  ) {
+    return this.clientsService.findAll(user.tenantId, filter);
+  }
+
+  @Query(() => [Client])
+  @UseGuards(GqlAuthGuard)
+  async myClients(
+    @Args('filter', { nullable: true }) filter: ClientsFilterInput,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.clientsService.findByCommercial(user.id, filter);
+  }
+
+  @Query(() => Client)
+  @UseGuards(GqlAuthGuard)
+  async client(
+    @Args('id', { type: () => String }) id: string,
+    @CurrentUser() user: { tenantId: string },
+  ) {
+    return this.clientsService.findById(id, user.tenantId);
+  }
+
+  @Query(() => [ClientMapItem])
+  @UseGuards(GqlAuthGuard)
+  async clientsForMap(@CurrentUser() user: { tenantId: string }) {
+    return this.clientsService.findForMap(user.tenantId);
+  }
+
+  @Query(() => ClientStats)
+  @UseGuards(GqlAuthGuard)
+  async clientStats(@CurrentUser() user: { tenantId: string }) {
+    return this.clientsService.getStats(user.tenantId);
   }
 }
