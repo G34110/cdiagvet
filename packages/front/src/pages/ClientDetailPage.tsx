@@ -4,12 +4,18 @@ import { useQuery, useMutation } from '@apollo/client';
 import { ArrowLeft, Phone, Mail, MapPin, Edit, Trash2, X } from 'lucide-react';
 import { CLIENT_QUERY, DELETE_CLIENT_MUTATION, MY_CLIENTS_QUERY } from '../graphql/clients';
 import ClientForm from '../components/ClientForm';
+import NotesSection from '../components/NotesSection';
+import PhotosSection from '../components/PhotosSection';
+import VisitsSection from '../components/VisitsSection';
+
+type TabType = 'notes' | 'photos' | 'visits' | 'orders';
 
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('notes');
 
   const { data, loading, error, refetch } = useQuery(CLIENT_QUERY, {
     variables: { id },
@@ -128,16 +134,21 @@ export default function ClientDetailPage() {
       </div>
 
       <div className="tabs">
-        <button className="tab active">Notes</button>
-        <button className="tab">Historique</button>
-        <button className="tab">Commandes</button>
-        <button className="tab">Lots</button>
+        <button className={`tab ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>Notes</button>
+        <button className={`tab ${activeTab === 'photos' ? 'active' : ''}`} onClick={() => setActiveTab('photos')}>Photos</button>
+        <button className={`tab ${activeTab === 'visits' ? 'active' : ''}`} onClick={() => setActiveTab('visits')}>Visites</button>
+        <button className={`tab ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>Commandes</button>
       </div>
 
       <div className="tab-content">
-        <div className="empty-state">
-          <p>Aucune note pour ce client</p>
-        </div>
+        {activeTab === 'notes' && id && <NotesSection clientId={id} />}
+        {activeTab === 'photos' && id && <PhotosSection clientId={id} />}
+        {activeTab === 'visits' && id && <VisitsSection clientId={id} />}
+        {activeTab === 'orders' && (
+          <div className="empty-state">
+            <p>Module commandes à venir</p>
+          </div>
+        )}
       </div>
     </div>
   );

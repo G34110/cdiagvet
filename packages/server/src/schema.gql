@@ -66,6 +66,17 @@ input CreateClientInput {
   postalCode: String
 }
 
+input CreateNoteInput {
+  clientId: String!
+  content: String!
+}
+
+input CreatePhotoInput {
+  caption: String
+  url: String!
+  visitId: String!
+}
+
 input CreateVisitInput {
   clientId: String!
   date: String!
@@ -91,16 +102,47 @@ input LoginInput {
 
 type Mutation {
   createClient(input: CreateClientInput!): Client!
+  createNote(input: CreateNoteInput!): Note!
+  createPhoto(input: CreatePhotoInput!): Photo!
   createVisit(input: CreateVisitInput!): Visit!
   deleteClient(id: String!): Client!
+  deleteNote(id: String!): Note!
+  deletePhoto(id: String!): Photo!
   deleteVisit(id: String!): Visit!
   login(input: LoginInput!): AuthPayload!
   updateClient(id: String!, input: UpdateClientInput!): Client!
+  updateNote(id: String!, input: UpdateNoteInput!): Note!
   updateVisit(id: String!, input: UpdateVisitInput!): Visit!
+}
+
+type Note {
+  author: NoteAuthor
+  authorId: String!
+  clientId: String!
+  content: String!
+  createdAt: DateTime!
+  id: ID!
+  updatedAt: DateTime!
+}
+
+type NoteAuthor {
+  firstName: String!
+  id: ID!
+  lastName: String!
+}
+
+type Photo {
+  caption: String
+  createdAt: DateTime!
+  id: ID!
+  url: String!
+  visitId: String!
 }
 
 type Query {
   client(id: String!): Client!
+  clientNotes(clientId: String!): [Note!]!
+  clientPhotos(clientId: String!): [Photo!]!
   clientStats: ClientStats!
   clientVisits(clientId: String!): [Visit!]!
   clients(filter: ClientsFilterInput): ClientsResponse!
@@ -108,9 +150,11 @@ type Query {
   me: User!
   myClients(filter: ClientsFilterInput): [Client!]!
   myVisits(filter: VisitsFilterInput): [Visit!]!
+  note(id: String!): Note!
   todayVisits: [Visit!]!
   upcomingVisits(days: Int = 7): [Visit!]!
   visit(id: String!): Visit!
+  visitPhotos(visitId: String!): [Photo!]!
 }
 
 input UpdateClientInput {
@@ -124,6 +168,10 @@ input UpdateClientInput {
   name: String
   phone: String
   postalCode: String
+}
+
+input UpdateNoteInput {
+  content: String
 }
 
 input UpdateVisitInput {

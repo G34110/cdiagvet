@@ -9,6 +9,9 @@ import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { VisitsModule } from './modules/visits/visits.module';
+import { NotesModule } from './modules/notes/notes.module';
+import { PhotosModule } from './modules/photos/photos.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -28,6 +31,9 @@ import { VisitsModule } from './modules/visits/visits.module';
     UsersModule,
     ClientsModule,
     VisitsModule,
+    NotesModule,
+    PhotosModule,
+    UploadsModule,
   ],
 })
 export class AppModule {}

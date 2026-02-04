@@ -28,8 +28,12 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
   const navigate = useNavigate();
   const isEditing = !!visit?.id;
 
-  const { data: clientsData } = useQuery(MY_CLIENTS_QUERY);
+  const { data: clientsData, loading: clientsLoading, error: clientsError } = useQuery(MY_CLIENTS_QUERY);
   const clients: Client[] = clientsData?.myClients || [];
+
+  if (clientsError) {
+    console.error('Error loading clients:', clientsError);
+  }
 
   const formatDateForInput = (dateString?: string) => {
     if (!dateString) return '';
@@ -90,8 +94,9 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
       } else {
         navigate('/calendar');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving visit:', err);
+      alert(`Erreur: ${err.message || 'Impossible de sauvegarder la visite'}`);
     }
   };
 
@@ -116,13 +121,18 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
             fontSize: '1rem'
           }}
         >
-          <option value="">Sélectionner un client</option>
+          <option value="">{clientsLoading ? 'Chargement...' : 'Sélectionner un client'}</option>
           {clients.map((client) => (
             <option key={client.id} value={client.id}>
               {client.name} {client.city ? `- ${client.city}` : ''}
             </option>
           ))}
         </select>
+        {!clientsLoading && clients.length === 0 && (
+          <p style={{ color: 'var(--danger)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+            Aucun client disponible. Créez d'abord un client.
+          </p>
+        )}
       </div>
 
       <div className="form-group">
