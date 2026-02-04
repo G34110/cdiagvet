@@ -15,8 +15,7 @@ type Client {
   country: String!
   createdAt: DateTime!
   email: String
-  filiere: Filiere
-  filiereId: String
+  filieres: [Filiere!]
   id: ID!
   isActive: Boolean!
   latitude: Float
@@ -44,7 +43,7 @@ type ClientStats {
 
 input ClientsFilterInput {
   city: String
-  filiereId: String
+  filiereIds: [String!]
   isActive: Boolean
   search: String
   skip: Int = 0
@@ -60,7 +59,7 @@ input CreateClientInput {
   address: String
   city: String
   email: String
-  filiereId: String
+  filiereIds: [String!]
   name: String!
   phone: String
   postalCode: String
@@ -147,6 +146,7 @@ type Query {
   clientVisits(clientId: String!): [Visit!]!
   clients(filter: ClientsFilterInput): ClientsResponse!
   clientsForMap: [ClientMapItem!]!
+  filieres: [Filiere!]!
   me: User!
   myClients(filter: ClientsFilterInput): [Client!]!
   myVisits(filter: VisitsFilterInput): [Visit!]!
@@ -161,7 +161,7 @@ input UpdateClientInput {
   address: String
   city: String
   email: String
-  filiereId: String
+  filiereIds: [String!]
   isActive: Boolean
   latitude: Float
   longitude: Float

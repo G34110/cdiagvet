@@ -7,9 +7,9 @@ export class ClientsFilterInput {
   @IsOptional()
   search?: string;
 
-  @Field({ nullable: true })
+  @Field(() => [String], { nullable: true })
   @IsOptional()
-  filiereId?: string;
+  filiereIds?: string[];
 
   @Field({ nullable: true })
   @IsOptional()

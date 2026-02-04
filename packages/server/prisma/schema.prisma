@@ -74,10 +74,21 @@ model Filiere {
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
   responsable User?  @relation("ResponsableFiliere")
-  clients     Client[]
+  clients     ClientFiliere[]
 
   @@unique([tenantId, code])
   @@map("filieres")
+}
+
+model ClientFiliere {
+  clientId  String   @map("client_id")
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  filiereId String   @map("filiere_id")
+  filiere   Filiere  @relation(fields: [filiereId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([clientId, filiereId])
+  @@map("client_filieres")
 }
 
 // ============================================
@@ -103,8 +114,7 @@ model Client {
   tenantId    String   @map("tenant_id")
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
 
-  filiereId   String?  @map("filiere_id")
-  filiere     Filiere? @relation(fields: [filiereId], references: [id])
+  filieres    ClientFiliere[]
 
   commercialId String? @map("commercial_id")
   commercial   User?   @relation("CommercialClients", fields: [commercialId], references: [id])

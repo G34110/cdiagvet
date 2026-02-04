@@ -12,7 +12,7 @@ export const CLIENTS_QUERY = gql`
         phone
         email
         isActive
-        filiere {
+        filieres {
           id
           name
         }
@@ -38,7 +38,7 @@ export const MY_CLIENTS_QUERY = gql`
       phone
       email
       isActive
-      filiere {
+      filieres {
         id
         name
       }
@@ -62,8 +62,7 @@ export const CLIENT_QUERY = gql`
       isActive
       createdAt
       updatedAt
-      filiereId
-      filiere {
+      filieres {
         id
         name
       }
@@ -128,6 +127,15 @@ export const DELETE_CLIENT_MUTATION = gql`
   mutation DeleteClient($id: String!) {
     deleteClient(id: $id) {
       id
+    }
+  }
+`;
+
+export const FILIERES_QUERY = gql`
+  query Filieres {
+    filieres {
+      id
+      name
     }
   }
 `;

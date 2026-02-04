@@ -45,10 +45,33 @@ async function main() {
     },
   });
 
+  // Create filières
+  const filieresData = [
+    { code: 'PORCINE', name: 'Porcine' },
+    { code: 'CANINE', name: 'Canine' },
+    { code: 'OVINE', name: 'Ovine' },
+    { code: 'BOVINE', name: 'Bovine' },
+    { code: 'APICULTURE', name: 'Apiculture' },
+    { code: 'AVICULTURE', name: 'Aviculture' },
+  ];
+
+  for (const f of filieresData) {
+    await prisma.filiere.upsert({
+      where: { tenantId_code: { tenantId: tenant.id, code: f.code } },
+      update: {},
+      create: {
+        code: f.code,
+        name: f.name,
+        tenantId: tenant.id,
+      },
+    });
+  }
+
   console.log('✅ Seed data created:');
   console.log(`   - Tenant: ${tenant.name}`);
   console.log(`   - Admin: ${admin.email}`);
   console.log(`   - Commercial: ${commercial.email}`);
+  console.log(`   - Filières: ${filieresData.length}`);
   console.log('\n📧 Credentials: email / admin123');
 }
 

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useMutation } from '@apollo/client';
+import { useMutation, useQuery } from '@apollo/client';
 import { useNavigate } from 'react-router-dom';
 import { Save, X } from 'lucide-react';
-import { CREATE_CLIENT_MUTATION, UPDATE_CLIENT_MUTATION, MY_CLIENTS_QUERY } from '../graphql/clients';
+import { CREATE_CLIENT_MUTATION, UPDATE_CLIENT_MUTATION, MY_CLIENTS_QUERY, FILIERES_QUERY } from '../graphql/clients';
 
 interface ClientFormProps {
   client?: {
@@ -13,7 +13,7 @@ interface ClientFormProps {
     postalCode?: string;
     phone?: string;
     email?: string;
-    filiereId?: string;
+    filieres?: { id: string; name: string }[];
     isActive?: boolean;
   };
   onCancel?: () => void;
@@ -31,8 +31,12 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
     postalCode: client?.postalCode || '',
     phone: client?.phone || '',
     email: client?.email || '',
+    filiereIds: client?.filieres?.map(f => f.id) || [] as string[],
     isActive: client?.isActive ?? true,
   });
+
+  const { data: filieresData } = useQuery(FILIERES_QUERY);
+  const filieres = filieresData?.filieres || [];
 
   const [createClient, { loading: creating }] = useMutation(CREATE_CLIENT_MUTATION, {
     refetchQueries: [{ query: MY_CLIENTS_QUERY }],
@@ -40,7 +44,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
 
   const [updateClient, { loading: updating }] = useMutation(UPDATE_CLIENT_MUTATION);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
   };
@@ -58,6 +62,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
     if (form.postalCode) cleanedInput.postalCode = form.postalCode;
     if (form.phone) cleanedInput.phone = form.phone;
     if (form.email) cleanedInput.email = form.email;
+    cleanedInput.filiereIds = form.filiereIds;
 
     // Only include isActive for updates (not creation)
     if (isEditing) {
@@ -94,17 +99,40 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
 
   return (
     <form className="client-form" onSubmit={handleSubmit}>
-      <div className="form-group">
-        <label htmlFor="name">Nom *</label>
-        <input
-          type="text"
-          id="name"
-          name="name"
-          value={form.name}
-          onChange={handleChange}
-          required
-          placeholder="Nom du client"
-        />
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="name">Nom *</label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            required
+            placeholder="Nom du client"
+          />
+        </div>
+        <div className="form-group">
+          <label>Filières</label>
+          <div className="checkbox-group" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem' }}>
+            {filieres.map((f: { id: string; name: string }) => (
+              <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={form.filiereIds.includes(f.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setForm(prev => ({ ...prev, filiereIds: [...prev.filiereIds, f.id] }));
+                    } else {
+                      setForm(prev => ({ ...prev, filiereIds: prev.filiereIds.filter(id => id !== f.id) }));
+                    }
+                  }}
+                />
+                {f.name}
+              </label>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="form-row">

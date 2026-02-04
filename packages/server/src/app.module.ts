@@ -5,6 +5,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 
 import { PrismaModule } from './common/prisma/prisma.module';
+import { ServicesModule } from './common/services/services.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { ClientsModule } from './modules/clients/clients.module';
@@ -12,6 +13,7 @@ import { VisitsModule } from './modules/visits/visits.module';
 import { NotesModule } from './modules/notes/notes.module';
 import { PhotosModule } from './modules/photos/photos.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { FilieresModule } from './modules/filieres/filieres.module';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
       context: ({ req, res }: { req: Request; res: Response }) => ({ req, res }),
     }),
     PrismaModule,
+    ServicesModule,
     AuthModule,
     UsersModule,
     ClientsModule,
@@ -34,6 +37,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
     NotesModule,
     PhotosModule,
     UploadsModule,
+    FilieresModule,
   ],
 })
 export class AppModule {}

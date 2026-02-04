@@ -1,29 +1,65 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { GeocodingService } from '../../common/services/geocoding.service';
 import { CreateClientInput } from './dto/create-client.input';
 import { UpdateClientInput } from './dto/update-client.input';
 import { ClientsFilterInput } from './dto/clients-filter.input';
 
 @Injectable()
 export class ClientsService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(ClientsService.name);
+
+  constructor(
+    private prisma: PrismaService,
+    private geocoding: GeocodingService,
+  ) {}
 
   async create(input: CreateClientInput, tenantId: string, commercialId: string) {
-    return this.prisma.client.create({
+    this.logger.log(`Creating client: ${input.name}, address: ${input.address}, city: ${input.city}`);
+    
+    const coords = await this.geocoding.geocodeAddress(
+      input.address,
+      input.city,
+      input.postalCode,
+      'France',
+    );
+
+    this.logger.log(`Geocoding result: ${JSON.stringify(coords)}`);
+
+    const { filiereIds, ...clientData } = input;
+
+    const client = await this.prisma.client.create({
       data: {
-        ...input,
+        ...clientData,
         tenantId,
         commercialId,
+        latitude: coords?.latitude,
+        longitude: coords?.longitude,
+        filieres: filiereIds?.length ? {
+          create: filiereIds.map(filiereId => ({ filiereId })),
+        } : undefined,
       },
-      include: { filiere: true, commercial: true },
+      include: { 
+        filieres: { include: { filiere: true } }, 
+        commercial: true,
+      },
     });
+
+    return this.transformClientFilieres(client);
+  }
+
+  private transformClientFilieres(client: any) {
+    return {
+      ...client,
+      filieres: client.filieres?.map((cf: any) => cf.filiere) || [],
+    };
   }
 
   async findById(id: string, tenantId: string) {
     const client = await this.prisma.client.findUnique({
       where: { id },
       include: { 
-        filiere: true, 
+        filieres: { include: { filiere: true } }, 
         commercial: true, 
         notes: { orderBy: { createdAt: 'desc' } },
         visits: { orderBy: { date: 'desc' }, take: 10 },
@@ -38,7 +74,7 @@ export class ClientsService {
       throw new ForbiddenException('Access denied');
     }
 
-    return client;
+    return this.transformClientFilieres(client);
   }
 
   async findAll(tenantId: string, filter?: ClientsFilterInput) {
@@ -56,8 +92,8 @@ export class ClientsService {
       ];
     }
 
-    if (filter?.filiereId) {
-      where.filiereId = filter.filiereId;
+    if (filter?.filiereIds?.length) {
+      where.filieres = { some: { filiereId: { in: filter.filiereIds } } };
     }
 
     if (filter?.city) {
@@ -71,7 +107,7 @@ export class ClientsService {
     const [clients, total] = await Promise.all([
       this.prisma.client.findMany({
         where,
-        include: { filiere: true, commercial: true },
+        include: { filieres: { include: { filiere: true } }, commercial: true },
         orderBy: { name: 'asc' },
         skip: filter?.skip ?? 0,
         take: filter?.take ?? 50,
@@ -79,7 +115,7 @@ export class ClientsService {
       this.prisma.client.count({ where }),
     ]);
 
-    return { clients, total };
+    return { clients: clients.map((c: any) => this.transformClientFilieres(c)), total };
   }
 
   async findByCommercial(commercialId: string, filter?: ClientsFilterInput) {
@@ -101,13 +137,14 @@ export class ClientsService {
       ];
     }
 
-    return this.prisma.client.findMany({
+    const clients = await this.prisma.client.findMany({
       where,
-      include: { filiere: true },
+      include: { filieres: { include: { filiere: true } } },
       orderBy: { name: 'asc' },
       skip: filter?.skip ?? 0,
       take: filter?.take ?? 50,
     });
+    return clients.map((c: any) => this.transformClientFilieres(c));
   }
 
   async findForMap(tenantId: string) {
@@ -126,7 +163,7 @@ export class ClientsService {
         city: true,
         latitude: true,
         longitude: true,
-        filiere: { select: { id: true, name: true } },
+        filieres: { include: { filiere: { select: { id: true, name: true } } } },
       },
     });
   }
@@ -142,11 +179,43 @@ export class ClientsService {
       throw new ForbiddenException('Access denied');
     }
 
-    return this.prisma.client.update({
+    const { filiereIds, ...rest } = data;
+    const updateData: any = { ...rest };
+
+    // Re-geocode if address changed
+    const addressChanged =
+      (data.address !== undefined && data.address !== client.address) ||
+      (data.city !== undefined && data.city !== client.city) ||
+      (data.postalCode !== undefined && data.postalCode !== client.postalCode);
+
+    if (addressChanged) {
+      const coords = await this.geocoding.geocodeAddress(
+        data.address ?? client.address ?? undefined,
+        data.city ?? client.city ?? undefined,
+        data.postalCode ?? client.postalCode ?? undefined,
+        'France',
+      );
+      if (coords) {
+        updateData.latitude = coords.latitude;
+        updateData.longitude = coords.longitude;
+      }
+    }
+
+    // Update filieres if provided
+    if (filiereIds !== undefined) {
+      updateData.filieres = {
+        deleteMany: {},
+        create: filiereIds.map(filiereId => ({ filiereId })),
+      };
+    }
+
+    const updated = await this.prisma.client.update({
       where: { id },
-      data,
-      include: { filiere: true, commercial: true },
+      data: updateData,
+      include: { filieres: { include: { filiere: true } }, commercial: true },
     });
+
+    return this.transformClientFilieres(updated);
   }
 
   async softDelete(id: string, tenantId: string) {
@@ -167,15 +236,17 @@ export class ClientsService {
   }
 
   async getStats(tenantId: string) {
-    const [total, active, byFiliere] = await Promise.all([
+    const [total, active] = await Promise.all([
       this.prisma.client.count({ where: { tenantId, deletedAt: null } }),
       this.prisma.client.count({ where: { tenantId, deletedAt: null, isActive: true } }),
-      this.prisma.client.groupBy({
-        by: ['filiereId'],
-        where: { tenantId, deletedAt: null },
-        _count: true,
-      }),
     ]);
+
+    // Get stats by filière via the join table
+    const byFiliere = await this.prisma.clientFiliere.groupBy({
+      by: ['filiereId'],
+      where: { client: { tenantId, deletedAt: null } },
+      _count: true,
+    });
 
     return { total, active, inactive: total - active, byFiliere };
   }

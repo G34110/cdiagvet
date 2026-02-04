@@ -28,7 +28,7 @@ export class CreateClientInput {
   @IsEmail({}, { message: 'Email invalide' })
   email?: string;
 
-  @Field({ nullable: true })
+  @Field(() => [String], { nullable: true })
   @IsOptional()
-  filiereId?: string;
+  filiereIds?: string[];
 }
