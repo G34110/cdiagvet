@@ -137,6 +137,15 @@ export class ClientsService {
       ];
     }
 
+    // Filter by filières
+    if (filter?.filiereIds && filter.filiereIds.length > 0) {
+      where.filieres = {
+        some: {
+          filiereId: { in: filter.filiereIds },
+        },
+      };
+    }
+
     const clients = await this.prisma.client.findMany({
       where,
       include: { filieres: { include: { filiere: true } } },
