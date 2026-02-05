@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { ArrowLeft, Phone, Mail, MapPin, Edit, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, MapPin, Edit, Trash2 } from 'lucide-react';
 import { CLIENT_QUERY, DELETE_CLIENT_MUTATION, MY_CLIENTS_QUERY } from '../graphql/clients';
 import ClientForm from '../components/ClientForm';
 import NotesSection from '../components/NotesSection';
@@ -47,14 +47,10 @@ export default function ClientDetailPage() {
   if (isEditing) {
     return (
       <div className="client-detail-page">
-        <header className="page-header">
-          <button className="back-link" onClick={() => setIsEditing(false)}>
-            <X size={20} /> Annuler
-          </button>
-        </header>
         <h1>Modifier {client.name}</h1>
         <ClientForm 
           client={client} 
+          onCancel={() => setIsEditing(false)}
           onSuccess={() => {
             setIsEditing(false);
             refetch();
@@ -112,6 +108,37 @@ export default function ClientDetailPage() {
         </span>
       </div>
 
+      {client.filieres && client.filieres.length > 0 && (
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+          {client.filieres.map((f: { id: string; name: string }) => {
+            const colors: Record<string, { bg: string; border: string; text: string }> = {
+              'Porcine': { bg: '#FFE4E6', border: '#FDA4AF', text: '#BE123C' },
+              'Canine': { bg: '#E0E7FF', border: '#A5B4FC', text: '#4338CA' },
+              'Ovine': { bg: '#D1FAE5', border: '#6EE7B7', text: '#047857' },
+              'Bovine': { bg: '#F5E6D3', border: '#D4A574', text: '#8B4513' },
+              'Apiculture': { bg: '#FEF08A', border: '#FACC15', text: '#854D0E' },
+              'Aviculture': { bg: '#E0F2FE', border: '#7DD3FC', text: '#0369A1' },
+            };
+            const color = colors[f.name] || { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' };
+            return (
+              <span
+                key={f.id}
+                style={{
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '15px',
+                  background: color.bg,
+                  color: color.text,
+                  border: `1px solid ${color.border}`,
+                  fontSize: '0.85rem',
+                }}
+              >
+                {f.name}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
       <div className="client-info-grid">
         <div className="info-card">
           <h3>Coordonnées</h3>
@@ -121,8 +148,8 @@ export default function ClientDetailPage() {
           {client.email && (
             <p><Mail size={16} /> {client.email}</p>
           )}
-          {client.address && (
-            <p><MapPin size={16} /> {client.address}, {client.postalCode} {client.city}</p>
+          {client.addressLine1 && (
+            <p><MapPin size={16} /> {client.addressLine1}{client.addressLine2 ? `, ${client.addressLine2}` : ''}, {client.postalCode} {client.city}{client.region ? `, ${client.region}` : ''} - {client.country}</p>
           )}
         </div>
 

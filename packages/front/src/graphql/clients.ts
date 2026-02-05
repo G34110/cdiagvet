@@ -6,9 +6,13 @@ export const CLIENTS_QUERY = gql`
       clients {
         id
         name
-        address
+        organization
+        addressLine1
+        addressLine2
         city
+        region
         postalCode
+        country
         phone
         email
         isActive
@@ -32,9 +36,13 @@ export const MY_CLIENTS_QUERY = gql`
     myClients(filter: $filter) {
       id
       name
-      address
+      organization
+      addressLine1
+      addressLine2
       city
+      region
       postalCode
+      country
       phone
       email
       isActive
@@ -51,8 +59,11 @@ export const CLIENT_QUERY = gql`
     client(id: $id) {
       id
       name
-      address
+      organization
+      addressLine1
+      addressLine2
       city
+      region
       postalCode
       country
       phone
@@ -90,7 +101,7 @@ export const CLIENTS_FOR_MAP_QUERY = gql`
     clientsForMap {
       id
       name
-      address
+      addressLine1
       city
       latitude
       longitude
@@ -113,9 +124,13 @@ export const UPDATE_CLIENT_MUTATION = gql`
     updateClient(id: $id, input: $input) {
       id
       name
-      address
+      organization
+      addressLine1
+      addressLine2
       city
+      region
       postalCode
+      country
       phone
       email
       isActive
@@ -131,9 +146,24 @@ export const DELETE_CLIENT_MUTATION = gql`
   }
 `;
 
+export const DELETE_ALL_CLIENTS_MUTATION = gql`
+  mutation DeleteAllClients {
+    deleteAllClients
+  }
+`;
+
 export const FILIERES_QUERY = gql`
   query Filieres {
     filieres {
+      id
+      name
+    }
+  }
+`;
+
+export const ALL_FILIERES_QUERY = gql`
+  query AllFilieres {
+    allFilieres {
       id
       name
     }

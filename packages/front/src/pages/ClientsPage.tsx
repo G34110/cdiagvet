@@ -1,8 +1,10 @@
-import { useQuery } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Upload, Download } from 'lucide-react';
+import { Plus, Search, Upload, Download, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { MY_CLIENTS_QUERY, CLIENT_STATS_QUERY, FILIERES_QUERY } from '../graphql/clients';
+import { useRecoilValue } from 'recoil';
+import { MY_CLIENTS_QUERY, CLIENT_STATS_QUERY, DELETE_ALL_CLIENTS_MUTATION } from '../graphql/clients';
+import { authState } from '../state/auth';
 
 interface Filiere {
   id: string;
@@ -22,22 +24,47 @@ interface Client {
 export default function ClientsPage() {
   const [search, setSearch] = useState('');
   const [selectedFilieres, setSelectedFilieres] = useState<string[]>([]);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  
+  const auth = useRecoilValue(authState);
+  const isAdmin = auth.user?.role === 'ADMIN';
+  const isNotProd = (import.meta as any).env?.MODE !== 'production';
   
   const filter: Record<string, unknown> = {};
   if (search) filter.search = search;
   if (selectedFilieres.length > 0) filter.filiereIds = selectedFilieres;
   
-  const { data, loading, error } = useQuery(MY_CLIENTS_QUERY, {
+  const { data, loading, error, refetch } = useQuery(MY_CLIENTS_QUERY, {
     variables: { filter: Object.keys(filter).length > 0 ? filter : null },
   });
-  const { data: statsData } = useQuery(CLIENT_STATS_QUERY);
-  const { data: filieresData } = useQuery(FILIERES_QUERY);
+  // Fetch all clients (without filiereIds filter) to extract available filières for filter buttons
+  const { data: allClientsData } = useQuery(MY_CLIENTS_QUERY, {
+    variables: { filter: search ? { search } : null },
+  });
+  const { data: statsData, refetch: refetchStats } = useQuery(CLIENT_STATS_QUERY);
+  
+  const [deleteAllClients, { loading: deleting }] = useMutation(DELETE_ALL_CLIENTS_MUTATION, {
+    onCompleted: () => {
+      refetch();
+      refetchStats();
+      setShowDeleteAllConfirm(false);
+    },
+  });
 
   const clients: Client[] = data?.myClients || [];
+  const allClients: Client[] = allClientsData?.myClients || [];
   const stats = statsData?.clientStats;
-  const filieres: Filiere[] = filieresData?.filieres || [];
   
-  // Compute filière counts from current client list
+  // Extract unique filières from ALL clients (without filière filter) for filter buttons
+  const filieresMap: Record<string, Filiere> = {};
+  allClients.forEach(client => {
+    client.filieres?.forEach(f => {
+      if (!filieresMap[f.id]) filieresMap[f.id] = f;
+    });
+  });
+  const filieres: Filiere[] = Object.values(filieresMap);
+  
+  // Compute filière counts from currently displayed (filtered) clients
   const filiereCounts: Record<string, number> = {};
   clients.forEach(client => {
     client.filieres?.forEach(f => {
@@ -59,10 +86,10 @@ export default function ClientsPage() {
     return filiereColors[name] || { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' };
   };
 
-  const toggleFiliere = (filiereId: string) => {
+  const selectFiliere = (filiereId: string) => {
     setSelectedFilieres(prev => 
       prev.includes(filiereId) 
-        ? prev.filter(id => id !== filiereId)
+        ? prev // Already selected, do nothing (use Réinitialiser to clear)
         : [...prev, filiereId]
     );
   };
@@ -132,8 +159,44 @@ export default function ClientsPage() {
           <Link to="/clients/new" className="btn-primary">
             <Plus size={20} /> Nouveau client
           </Link>
+          {isAdmin && isNotProd && (
+            <button 
+              onClick={() => setShowDeleteAllConfirm(true)} 
+              className="btn-secondary" 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--danger)' }}
+            >
+              <Trash2 size={18} /> Supprimer tout
+            </button>
+          )}
         </div>
       </header>
+
+      {showDeleteAllConfirm && (
+        <div className="confirm-dialog" style={{ 
+          background: '#fef2f2', 
+          padding: '1rem', 
+          borderRadius: '0.5rem', 
+          marginBottom: '1rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span style={{ color: '#991b1b', fontWeight: 500 }}>
+            ⚠️ Supprimer TOUS les clients ({stats?.total || 0}) ? Cette action est irréversible.
+          </span>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn-secondary" onClick={() => setShowDeleteAllConfirm(false)}>Annuler</button>
+            <button 
+              className="btn-primary" 
+              style={{ background: 'var(--danger)' }} 
+              onClick={() => deleteAllClients()}
+              disabled={deleting}
+            >
+              {deleting ? 'Suppression...' : 'Confirmer la suppression'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="search-bar">
         <Search size={20} />
@@ -151,7 +214,7 @@ export default function ClientsPage() {
             <button
               key={f.id}
               type="button"
-              onClick={() => toggleFiliere(f.id)}
+              onClick={() => selectFiliere(f.id)}
               className={`filiere-filter-btn ${selectedFilieres.includes(f.id) ? 'active' : ''}`}
               style={{
                 padding: '0.4rem 0.8rem',

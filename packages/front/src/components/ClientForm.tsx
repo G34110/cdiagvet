@@ -1,16 +1,21 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useMutation, useQuery } from '@apollo/client';
 import { useNavigate } from 'react-router-dom';
 import { Save, X } from 'lucide-react';
-import { CREATE_CLIENT_MUTATION, UPDATE_CLIENT_MUTATION, MY_CLIENTS_QUERY, FILIERES_QUERY } from '../graphql/clients';
+import { CREATE_CLIENT_MUTATION, UPDATE_CLIENT_MUTATION, MY_CLIENTS_QUERY, ALL_FILIERES_QUERY } from '../graphql/clients';
+import { countries, getCountryConfig, getRegionList } from '../config/countries';
 
 interface ClientFormProps {
   client?: {
     id: string;
     name: string;
-    address?: string;
+    organization?: string;
+    addressLine1?: string;
+    addressLine2?: string;
     city?: string;
+    region?: string;
     postalCode?: string;
+    country?: string;
     phone?: string;
     email?: string;
     filieres?: { id: string; name: string }[];
@@ -26,17 +31,24 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
 
   const [form, setForm] = useState({
     name: client?.name || '',
-    address: client?.address || '',
+    organization: client?.organization || '',
+    addressLine1: client?.addressLine1 || '',
+    addressLine2: client?.addressLine2 || '',
     city: client?.city || '',
+    region: client?.region || '',
     postalCode: client?.postalCode || '',
+    country: client?.country || 'FR',
     phone: client?.phone || '',
     email: client?.email || '',
     filiereIds: client?.filieres?.map(f => f.id) || [] as string[],
     isActive: client?.isActive ?? true,
   });
 
-  const { data: filieresData } = useQuery(FILIERES_QUERY);
-  const filieres = filieresData?.filieres || [];
+  const countryConfig = useMemo(() => getCountryConfig(form.country), [form.country]);
+  const regionList = useMemo(() => getRegionList(form.country), [form.country]);
+
+  const { data: filieresData } = useQuery(ALL_FILIERES_QUERY);
+  const filieres = filieresData?.allFilieres || [];
 
   const [createClient, { loading: creating }] = useMutation(CREATE_CLIENT_MUTATION, {
     refetchQueries: [{ query: MY_CLIENTS_QUERY }],
@@ -49,16 +61,35 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleCountryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCountry = e.target.value;
+    setForm(prev => ({
+      ...prev,
+      country: newCountry,
+      region: '', // Reset region when country changes
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate filières for new clients
+    if (!isEditing && form.filiereIds.length === 0) {
+      alert('Veuillez sélectionner au moins une filière');
+      return;
+    }
 
     // Build input - only include non-empty fields
     const cleanedInput: Record<string, unknown> = {
       name: form.name,
+      country: form.country,
     };
 
-    if (form.address) cleanedInput.address = form.address;
+    if (form.organization) cleanedInput.organization = form.organization;
+    if (form.addressLine1) cleanedInput.addressLine1 = form.addressLine1;
+    if (form.addressLine2) cleanedInput.addressLine2 = form.addressLine2;
     if (form.city) cleanedInput.city = form.city;
+    if (form.region) cleanedInput.region = form.region;
     if (form.postalCode) cleanedInput.postalCode = form.postalCode;
     if (form.phone) cleanedInput.phone = form.phone;
     if (form.email) cleanedInput.email = form.email;
@@ -113,7 +144,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
           />
         </div>
         <div className="form-group">
-          <label>Filières</label>
+          <label>Filières {!isEditing && '*'}</label>
           <div className="checkbox-group" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem' }}>
             {filieres.map((f: { id: string; name: string }) => (
               <label key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', cursor: 'pointer' }}>
@@ -137,42 +168,124 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
 
       <div className="form-row">
         <div className="form-group">
-          <label htmlFor="address">Adresse</label>
+          <label htmlFor="country">Pays *</label>
+          <select
+            id="country"
+            name="country"
+            value={form.country}
+            onChange={handleCountryChange}
+            required
+          >
+            {countries.map(c => (
+              <option key={c.code} value={c.code}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="form-group">
+          <label htmlFor="organization">Organisation</label>
           <input
             type="text"
-            id="address"
-            name="address"
-            value={form.address}
+            id="organization"
+            name="organization"
+            value={form.organization}
             onChange={handleChange}
-            placeholder="Adresse"
+            placeholder="Organisation (optionnel)"
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group" style={{ flex: 2 }}>
+          <label htmlFor="addressLine1">{countryConfig.labels.addressLine1}</label>
+          <input
+            type="text"
+            id="addressLine1"
+            name="addressLine1"
+            value={form.addressLine1}
+            onChange={handleChange}
+            placeholder={countryConfig.labels.addressLine1}
+          />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group" style={{ flex: 2 }}>
+          <label htmlFor="addressLine2">{countryConfig.labels.addressLine2}</label>
+          <input
+            type="text"
+            id="addressLine2"
+            name="addressLine2"
+            value={form.addressLine2}
+            onChange={handleChange}
+            placeholder={countryConfig.labels.addressLine2}
           />
         </div>
       </div>
 
       <div className="form-row">
         <div className="form-group">
-          <label htmlFor="postalCode">Code postal</label>
+          <label htmlFor="postalCode">
+            {countryConfig.labels.postalCode}
+            {countryConfig.required.postalCode && ' *'}
+          </label>
           <input
             type="text"
             id="postalCode"
             name="postalCode"
             value={form.postalCode}
             onChange={handleChange}
-            placeholder="Code postal"
+            placeholder={countryConfig.postalCodePlaceholder}
+            pattern={countryConfig.postalCodePattern}
+            required={countryConfig.required.postalCode}
           />
         </div>
         <div className="form-group">
-          <label htmlFor="city">Ville</label>
+          <label htmlFor="city">{countryConfig.labels.city}</label>
           <input
             type="text"
             id="city"
             name="city"
             value={form.city}
             onChange={handleChange}
-            placeholder="Ville"
+            placeholder={countryConfig.labels.city}
           />
         </div>
       </div>
+
+      {(countryConfig.required.region || regionList) && (
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="region">
+              {countryConfig.labels.region}
+              {countryConfig.required.region && ' *'}
+            </label>
+            {regionList ? (
+              <select
+                id="region"
+                name="region"
+                value={form.region}
+                onChange={handleChange}
+                required={countryConfig.required.region}
+              >
+                <option value="">-- Sélectionner --</option>
+                {regionList.map(r => (
+                  <option key={r.code} value={r.code}>{r.name}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                id="region"
+                name="region"
+                value={form.region}
+                onChange={handleChange}
+                placeholder={countryConfig.labels.region}
+                required={countryConfig.required.region}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="form-row">
         <div className="form-group">
