@@ -15,7 +15,8 @@ type AuthPayload {
 }
 
 type Client {
-  address: String
+  addressLine1: String
+  addressLine2: String
   city: String
   commercial: User
   commercialId: String
@@ -28,13 +29,23 @@ type Client {
   latitude: Float
   longitude: Float
   name: String!
+  organization: String
   phone: String
   postalCode: String
+  region: String
   updatedAt: DateTime!
 }
 
+type ClientAlert {
+  alertType: String!
+  clientId: String!
+  clientName: String!
+  createdAt: DateTime!
+  message: String!
+}
+
 type ClientMapItem {
-  address: String
+  addressLine1: String
   city: String
   id: String!
   latitude: Float!
@@ -63,13 +74,17 @@ type ClientsResponse {
 }
 
 input CreateClientInput {
-  address: String
+  addressLine1: String
+  addressLine2: String
   city: String
+  country: String = "FR"
   email: String
   filiereIds: [String!]
   name: String!
+  organization: String
   phone: String
   postalCode: String
+  region: String
 }
 
 input CreateNoteInput {
@@ -88,6 +103,22 @@ input CreateVisitInput {
   date: String!
   notes: String
   subject: String
+}
+
+type DashboardData {
+  alerts: [ClientAlert!]!
+  revenueByMonth: [RevenueByMonth!]!
+  stats: DashboardStats!
+}
+
+type DashboardStats {
+  activeClients: Int!
+  revenueThisMonth: Float!
+  totalClients: Int!
+  totalLots: Int!
+  totalRevenue: Float!
+  totalVisits: Int!
+  visitsThisMonth: Int!
 }
 
 """
@@ -141,6 +172,7 @@ type Mutation {
   createNote(input: CreateNoteInput!): Note!
   createPhoto(input: CreatePhotoInput!): Photo!
   createVisit(input: CreateVisitInput!): Visit!
+  deleteAllClients: Int!
   deleteClient(id: String!): Client!
   deleteNote(id: String!): Note!
   deletePhoto(id: String!): Photo!
@@ -184,6 +216,7 @@ type Product {
 }
 
 type Query {
+  allFilieres: [Filiere!]!
   allLots(search: String): [Lot!]!
   client(id: String!): Client!
   clientLots(clientId: ID!): [LotClient!]!
@@ -193,6 +226,7 @@ type Query {
   clientVisits(clientId: String!): [Visit!]!
   clients(filter: ClientsFilterInput): ClientsResponse!
   clientsForMap: [ClientMapItem!]!
+  dashboardData: DashboardData!
   filieres: [Filiere!]!
   lot(id: ID!): Lot
   lotTraceability(lotId: ID!): LotTraceability!
@@ -205,6 +239,11 @@ type Query {
   upcomingVisits(days: Int = 7): [Visit!]!
   visit(id: String!): Visit!
   visitPhotos(visitId: String!): [Photo!]!
+}
+
+type RevenueByMonth {
+  month: String!
+  revenue: Float!
 }
 
 input ScanBarcodeInput {
@@ -224,16 +263,20 @@ type ScanResult {
 }
 
 input UpdateClientInput {
-  address: String
+  addressLine1: String
+  addressLine2: String
   city: String
+  country: String = "FR"
   email: String
   filiereIds: [String!]
   isActive: Boolean
   latitude: Float
   longitude: Float
   name: String
+  organization: String
   phone: String
   postalCode: String
+  region: String
 }
 
 input UpdateNoteInput {

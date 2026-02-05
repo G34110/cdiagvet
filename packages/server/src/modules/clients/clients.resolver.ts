@@ -1,5 +1,5 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
+import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
+import { UseGuards, ForbiddenException } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { GqlAuthGuard } from '../../common/guards/gql-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -54,9 +54,15 @@ export class ClientsResolver {
   @UseGuards(GqlAuthGuard)
   async myClients(
     @Args('filter', { nullable: true }) filter: ClientsFilterInput,
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: { id: string; email: string; tenantId: string; role: string; filiereIds?: string[] },
   ) {
-    return this.clientsService.findByCommercial(user.id, filter);
+    return this.clientsService.findByUserRole({
+      tenantId: user.tenantId,
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+      filiereIds: user.filiereIds,
+    }, filter);
   }
 
   @Query(() => Client)
@@ -76,7 +82,28 @@ export class ClientsResolver {
 
   @Query(() => ClientStats)
   @UseGuards(GqlAuthGuard)
-  async clientStats(@CurrentUser() user: { tenantId: string }) {
-    return this.clientsService.getStats(user.tenantId);
+  async clientStats(
+    @CurrentUser() user: { id: string; tenantId: string; role: string; filiereIds?: string[] },
+  ) {
+    return this.clientsService.getStats({
+      tenantId: user.tenantId,
+      userId: user.id,
+      role: user.role,
+      filiereIds: user.filiereIds,
+    });
+  }
+
+  @Mutation(() => Int)
+  @UseGuards(GqlAuthGuard)
+  async deleteAllClients(
+    @CurrentUser() user: { tenantId: string; role: string },
+  ): Promise<number> {
+    if (user.role !== 'ADMIN') {
+      throw new ForbiddenException('Seuls les administrateurs peuvent supprimer tous les clients');
+    }
+    if (process.env.NODE_ENV === 'production') {
+      throw new ForbiddenException('Cette action est interdite en production');
+    }
+    return this.clientsService.deleteAll(user.tenantId);
   }
 }

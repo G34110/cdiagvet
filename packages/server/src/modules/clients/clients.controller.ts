@@ -66,7 +66,7 @@ export class ClientsController {
           continue;
         }
 
-        const [name, address, city, postalCode, phone, email, filieresStr] = fields;
+        const [name, addressLine1, city, postalCode, phone, email, filieresStr] = fields;
 
         if (!name) {
           result.errors.push({ line: lineNumber, error: 'Le nom est obligatoire' });
@@ -88,7 +88,7 @@ export class ClientsController {
         await this.clientsService.create(
           {
             name,
-            address: address || undefined,
+            addressLine1: addressLine1 || undefined,
             city: city || undefined,
             postalCode: postalCode || undefined,
             phone: phone || undefined,
@@ -133,6 +133,12 @@ export class ClientsController {
       // Admin can export all clients
       const result = await this.clientsService.findAll(tenantId, filter);
       clients = result.clients;
+    } else if (req.user.role === 'RESPONSABLE_FILIERE') {
+      // Responsable exports clients from their filières
+      clients = await this.clientsService.findByUserRole(
+        { userId: req.user.id, role: req.user.role, tenantId, filiereIds: req.user.filiereIds || [] },
+        filter,
+      );
     } else {
       // Commercial exports only their clients
       clients = await this.clientsService.findByCommercial(req.user.id, filter);
@@ -141,9 +147,13 @@ export class ClientsController {
     if (format === 'json') {
       const jsonData = clients.map((c: any) => ({
         name: c.name,
-        address: c.address || '',
+        organization: c.organization || '',
+        addressLine1: c.addressLine1 || '',
+        addressLine2: c.addressLine2 || '',
         city: c.city || '',
+        region: c.region || '',
         postalCode: c.postalCode || '',
+        country: c.country || 'FR',
         phone: c.phone || '',
         email: c.email || '',
         filieres: c.filieres?.map((f: any) => f.name).join(',') || '',
@@ -158,14 +168,15 @@ export class ClientsController {
     }
 
     // Default: CSV format
-    const header = 'name;address;city;postalCode;phone;email;filieres;isActive;latitude;longitude';
+    const header = 'name;addressLine1;city;postalCode;country;phone;email;filieres;isActive;latitude;longitude';
     const rows = clients.map((c: any) => {
       const filiereNames = c.filieres?.map((f: any) => f.name).join(',') || '';
       return [
         c.name || '',
-        c.address || '',
+        c.addressLine1 || '',
         c.city || '',
         c.postalCode || '',
+        c.country || 'FR',
         c.phone || '',
         c.email || '',
         filiereNames,

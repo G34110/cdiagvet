@@ -40,8 +40,7 @@ model User {
   tenantId     String   @map("tenant_id")
   tenant       Tenant   @relation(fields: [tenantId], references: [id])
 
-  filiereId    String?  @unique @map("filiere_id")
-  filiere      Filiere? @relation("ResponsableFiliere", fields: [filiereId], references: [id])
+  filieres     UserFiliere[] @relation("UserFilieres")
 
   clients      Client[] @relation("CommercialClients")
   notes        Note[]
@@ -73,11 +72,22 @@ model Filiere {
   tenantId  String   @map("tenant_id")
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
 
-  responsable User?  @relation("ResponsableFiliere")
-  clients     ClientFiliere[]
+  responsables UserFiliere[] @relation("FilierResponsables")
+  clients      ClientFiliere[]
 
   @@unique([tenantId, code])
   @@map("filieres")
+}
+
+model UserFiliere {
+  userId    String   @map("user_id")
+  user      User     @relation("UserFilieres", fields: [userId], references: [id], onDelete: Cascade)
+  filiereId String   @map("filiere_id")
+  filiere   Filiere  @relation("FilierResponsables", fields: [filiereId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@id([userId, filiereId])
+  @@map("user_filieres")
 }
 
 model ClientFiliere {
@@ -96,20 +106,23 @@ model ClientFiliere {
 // ============================================
 
 model Client {
-  id          String   @id @default(uuid())
-  name        String
-  address     String?
-  city        String?
-  postalCode  String?  @map("postal_code")
-  country     String   @default("France")
-  phone       String?
-  email       String?
-  latitude    Float?
-  longitude   Float?
-  isActive    Boolean  @default(true) @map("is_active")
-  deletedAt   DateTime? @map("deleted_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(uuid())
+  name          String
+  organization  String?
+  addressLine1  String?  @map("address_line1")
+  addressLine2  String?  @map("address_line2")
+  city          String?
+  region        String?
+  postalCode    String?  @map("postal_code")
+  country       String   @default("FR")
+  phone         String?
+  email         String?
+  latitude      Float?
+  longitude     Float?
+  isActive      Boolean  @default(true) @map("is_active")
+  deletedAt     DateTime? @map("deleted_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   tenantId    String   @map("tenant_id")
   tenant      Tenant   @relation(fields: [tenantId], references: [id])

@@ -68,6 +68,52 @@ export class VisitsService {
     });
   }
 
+  async findByUserRole(
+    ctx: { tenantId: string; userId: string; role: string; filiereIds?: string[] },
+    filter?: VisitsFilterInput,
+  ) {
+    const where: any = {};
+
+    // Role-based filtering
+    if (ctx.role === 'COMMERCIAL') {
+      where.userId = ctx.userId;
+    } else if (ctx.role === 'RESPONSABLE_FILIERE') {
+      if (ctx.filiereIds?.length) {
+        where.client = {
+          tenantId: ctx.tenantId,
+          deletedAt: null,
+          filieres: { some: { filiereId: { in: ctx.filiereIds } } },
+        };
+      } else {
+        return []; // No filières assigned
+      }
+    } else if (ctx.role === 'ADMIN') {
+      where.client = { tenantId: ctx.tenantId, deletedAt: null };
+    }
+
+    if (filter?.clientId) {
+      where.clientId = filter.clientId;
+    }
+
+    if (filter?.startDate || filter?.endDate) {
+      where.date = {};
+      if (filter.startDate) {
+        where.date.gte = new Date(filter.startDate);
+      }
+      if (filter.endDate) {
+        where.date.lte = new Date(filter.endDate);
+      }
+    }
+
+    return this.prisma.visit.findMany({
+      where,
+      include: { client: true, user: true },
+      orderBy: { date: 'asc' },
+      skip: filter?.skip ?? 0,
+      take: filter?.take ?? 100,
+    });
+  }
+
   async findByClient(clientId: string, userId: string) {
     return this.prisma.visit.findMany({
       where: { clientId, userId },

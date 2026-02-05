@@ -11,7 +11,12 @@ export class FilieresResolver {
   constructor(private readonly filieresService: FilieresService) {}
 
   @Query(() => [Filiere])
-  async filieres(@CurrentUser() user: { tenantId: string }) {
+  async filieres(@CurrentUser() user: { tenantId: string; role: string; filiereIds?: string[] }) {
+    return this.filieresService.findByUserRole(user.tenantId, user.role, user.filiereIds);
+  }
+
+  @Query(() => [Filiere])
+  async allFilieres(@CurrentUser() user: { tenantId: string }) {
     return this.filieresService.findAll(user.tenantId);
   }
 }

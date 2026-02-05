@@ -11,15 +11,24 @@ export class Client {
   name: string;
 
   @Field({ nullable: true })
-  address?: string;
+  organization?: string;
+
+  @Field({ nullable: true })
+  addressLine1?: string;
+
+  @Field({ nullable: true })
+  addressLine2?: string;
 
   @Field({ nullable: true })
   city?: string;
 
   @Field({ nullable: true })
+  region?: string;
+
+  @Field({ nullable: true })
   postalCode?: string;
 
-  @Field({ defaultValue: 'France' })
+  @Field({ defaultValue: 'FR' })
   country: string;
 
   @Field({ nullable: true })

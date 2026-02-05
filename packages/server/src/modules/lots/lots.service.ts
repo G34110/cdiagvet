@@ -128,7 +128,7 @@ export class LotsService {
       deliveries: deliveries.map(d => ({
         ...d,
         clientName: d.client.name,
-        clientAddress: d.client.address,
+        clientAddress: d.client.addressLine1,
         clientCity: d.client.city,
         clientPostalCode: d.client.postalCode,
       })),

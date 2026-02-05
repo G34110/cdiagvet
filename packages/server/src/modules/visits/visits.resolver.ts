@@ -53,9 +53,14 @@ export class VisitsResolver {
   @UseGuards(GqlAuthGuard)
   async myVisits(
     @Args('filter', { nullable: true }) filter: VisitsFilterInput,
-    @CurrentUser() user: { id: string },
+    @CurrentUser() user: { id: string; tenantId: string; role: string; filiereIds?: string[] },
   ) {
-    return this.visitsService.findByUser(user.id, filter);
+    return this.visitsService.findByUserRole({
+      tenantId: user.tenantId,
+      userId: user.id,
+      role: user.role,
+      filiereIds: user.filiereIds,
+    }, filter);
   }
 
   @Query(() => [Visit])

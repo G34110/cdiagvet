@@ -9,7 +9,15 @@ export class CreateClientInput {
 
   @Field({ nullable: true })
   @IsOptional()
-  address?: string;
+  organization?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  addressLine1?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  addressLine2?: string;
 
   @Field({ nullable: true })
   @IsOptional()
@@ -17,7 +25,15 @@ export class CreateClientInput {
 
   @Field({ nullable: true })
   @IsOptional()
+  region?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
   postalCode?: string;
+
+  @Field({ nullable: true, defaultValue: 'FR' })
+  @IsOptional()
+  country?: string;
 
   @Field({ nullable: true })
   @IsOptional()

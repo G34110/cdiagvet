@@ -15,13 +15,13 @@ export class ClientsService {
   ) {}
 
   async create(input: CreateClientInput, tenantId: string, commercialId: string) {
-    this.logger.log(`Creating client: ${input.name}, address: ${input.address}, city: ${input.city}`);
+    this.logger.log(`Creating client: ${input.name}, address: ${input.addressLine1}, city: ${input.city}`);
     
     const coords = await this.geocoding.geocodeAddress(
-      input.address,
+      input.addressLine1,
       input.city,
       input.postalCode,
-      'France',
+      input.country || 'FR',
     );
 
     this.logger.log(`Geocoding result: ${JSON.stringify(coords)}`);
@@ -156,6 +156,75 @@ export class ClientsService {
     return clients.map((c: any) => this.transformClientFilieres(c));
   }
 
+  async findByUserRole(
+    ctx: { tenantId: string; userId: string; email?: string; role: string; filiereIds?: string[] },
+    filter?: ClientsFilterInput,
+  ) {
+    const where: any = {
+      tenantId: ctx.tenantId,
+      deletedAt: null,
+    };
+
+    // Role-based filtering
+    console.log('findByUserRole ctx:', { email: ctx.email, role: ctx.role, filiereIds: ctx.filiereIds });
+    if (ctx.role === 'COMMERCIAL') {
+      where.commercialId = ctx.userId;
+    } else if (ctx.role === 'RESPONSABLE_FILIERE') {
+      if (ctx.filiereIds?.length) {
+        where.filieres = { some: { filiereId: { in: ctx.filiereIds } } };
+      } else {
+        // RESPONSABLE without filières sees nothing (security)
+        console.log('RESPONSABLE_FILIERE without filiereIds - returning empty');
+        return [];
+      }
+    }
+    // ADMIN sees all clients (no additional filter)
+
+    // Apply additional filters
+    if (filter?.isActive !== undefined) {
+      where.isActive = filter.isActive;
+    }
+
+    if (filter?.search) {
+      where.AND = where.AND || [];
+      where.AND.push({
+        OR: [
+          { name: { contains: filter.search, mode: 'insensitive' } },
+          { city: { contains: filter.search, mode: 'insensitive' } },
+          { phone: { contains: filter.search, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    // Filter by filières (for UI filter, combined with role filter)
+    if (filter?.filiereIds && filter.filiereIds.length > 0) {
+      if (ctx.role === 'RESPONSABLE_FILIERE' && ctx.filiereIds?.length) {
+        // Responsable: client must have at least one of user's filières AND the filtered filière
+        where.AND = where.AND || [];
+        where.AND.push(
+          { filieres: { some: { filiereId: { in: ctx.filiereIds } } } },
+          { filieres: { some: { filiereId: { in: filter.filiereIds } } } },
+        );
+        // Remove the simple filieres filter set earlier
+        delete where.filieres;
+      } else {
+        where.filieres = {
+          some: { filiereId: { in: filter.filiereIds } },
+        };
+      }
+    }
+
+    const clients = await this.prisma.client.findMany({
+      where,
+      include: { filieres: { include: { filiere: true } } },
+      orderBy: { name: 'asc' },
+      skip: filter?.skip ?? 0,
+      take: filter?.take ?? 50,
+    });
+
+    return clients.map((c: any) => this.transformClientFilieres(c));
+  }
+
   async findForMap(tenantId: string) {
     return this.prisma.client.findMany({
       where: {
@@ -168,7 +237,7 @@ export class ClientsService {
       select: {
         id: true,
         name: true,
-        address: true,
+        addressLine1: true,
         city: true,
         latitude: true,
         longitude: true,
@@ -193,16 +262,17 @@ export class ClientsService {
 
     // Re-geocode if address changed
     const addressChanged =
-      (data.address !== undefined && data.address !== client.address) ||
+      (data.addressLine1 !== undefined && data.addressLine1 !== client.addressLine1) ||
       (data.city !== undefined && data.city !== client.city) ||
-      (data.postalCode !== undefined && data.postalCode !== client.postalCode);
+      (data.postalCode !== undefined && data.postalCode !== client.postalCode) ||
+      (data.country !== undefined && data.country !== client.country);
 
     if (addressChanged) {
       const coords = await this.geocoding.geocodeAddress(
-        data.address ?? client.address ?? undefined,
+        data.addressLine1 ?? client.addressLine1 ?? undefined,
         data.city ?? client.city ?? undefined,
         data.postalCode ?? client.postalCode ?? undefined,
-        'France',
+        data.country ?? client.country ?? 'FR',
       );
       if (coords) {
         updateData.latitude = coords.latitude;
@@ -244,16 +314,40 @@ export class ClientsService {
     });
   }
 
-  async getStats(tenantId: string) {
+  async getStats(ctx: { tenantId: string; userId: string; role: string; filiereIds?: string[] }) {
+    // Build filter based on user role
+    const baseFilter: any = {
+      tenantId: ctx.tenantId,
+      deletedAt: null,
+    };
+
+    // COMMERCIAL: only their own clients
+    if (ctx.role === 'COMMERCIAL') {
+      baseFilter.commercialId = ctx.userId;
+    }
+    // RESPONSABLE_FILIERE: clients of their filières
+    else if (ctx.role === 'RESPONSABLE_FILIERE' && ctx.filiereIds?.length) {
+      baseFilter.filieres = {
+        some: { filiereId: { in: ctx.filiereIds } },
+      };
+    }
+    // ADMIN: all clients (no additional filter)
+
     const [total, active] = await Promise.all([
-      this.prisma.client.count({ where: { tenantId, deletedAt: null } }),
-      this.prisma.client.count({ where: { tenantId, deletedAt: null, isActive: true } }),
+      this.prisma.client.count({ where: baseFilter }),
+      this.prisma.client.count({ where: { ...baseFilter, isActive: true } }),
     ]);
 
     // Get stats by filière via the join table
+    const filiereFilter: any = { client: baseFilter };
+    // For RESPONSABLE_FILIERE, only show their filières stats
+    if (ctx.role === 'RESPONSABLE_FILIERE' && ctx.filiereIds?.length) {
+      filiereFilter.filiereId = { in: ctx.filiereIds };
+    }
+
     const byFiliere = await this.prisma.clientFiliere.groupBy({
       by: ['filiereId'],
-      where: { client: { tenantId, deletedAt: null } },
+      where: filiereFilter,
       _count: true,
     });
 
@@ -269,5 +363,32 @@ export class ClientsService {
       select: { id: true },
     });
     return filieres.map((f: { id: string }) => f.id);
+  }
+
+  async deleteAll(tenantId: string): Promise<number> {
+    // Delete in transaction with all dependent records
+    const result = await this.prisma.$transaction(async (tx) => {
+      // Get all client IDs for this tenant
+      const clients = await tx.client.findMany({
+        where: { tenantId },
+        select: { id: true },
+      });
+      const clientIds = clients.map(c => c.id);
+      
+      if (clientIds.length === 0) return 0;
+
+      // Delete dependent records first
+      await tx.order.deleteMany({ where: { clientId: { in: clientIds } } });
+      await tx.lotClient.deleteMany({ where: { clientId: { in: clientIds } } });
+      await tx.photo.deleteMany({ where: { visit: { clientId: { in: clientIds } } } });
+      await tx.visit.deleteMany({ where: { clientId: { in: clientIds } } });
+      await tx.note.deleteMany({ where: { clientId: { in: clientIds } } });
+      
+      // Delete clients (ClientFiliere will cascade)
+      const deleted = await tx.client.deleteMany({ where: { tenantId } });
+      return deleted.count;
+    });
+    
+    return result;
   }
 }

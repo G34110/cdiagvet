@@ -13,7 +13,10 @@ export class AuthService {
   async validateUser(email: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { email },
-      include: { tenant: true },
+      include: { 
+        tenant: true,
+        filieres: { include: { filiere: true } },
+      },
     });
 
     if (!user || !user.isActive) {
@@ -31,11 +34,15 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.validateUser(email, password);
 
+    // Extract filière IDs for RESPONSABLE_FILIERE role
+    const filiereIds = user.filieres?.map((uf: any) => uf.filiereId) || [];
+
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
       tenantId: user.tenantId,
+      filiereIds, // Array of filière IDs
     };
 
     return {
@@ -46,6 +53,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         role: user.role,
+        filiereIds,
       },
     };
   }

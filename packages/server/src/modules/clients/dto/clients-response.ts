@@ -31,7 +31,7 @@ export class ClientMapItem {
   name: string;
 
   @Field({ nullable: true })
-  address?: string;
+  addressLine1?: string;
 
   @Field({ nullable: true })
   city?: string;
