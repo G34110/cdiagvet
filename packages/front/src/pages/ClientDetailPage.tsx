@@ -7,8 +7,9 @@ import ClientForm from '../components/ClientForm';
 import NotesSection from '../components/NotesSection';
 import PhotosSection from '../components/PhotosSection';
 import VisitsSection from '../components/VisitsSection';
+import LotsSection from '../components/LotsSection';
 
-type TabType = 'notes' | 'photos' | 'visits' | 'orders';
+type TabType = 'notes' | 'photos' | 'visits' | 'lots' | 'orders';
 
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -137,6 +138,7 @@ export default function ClientDetailPage() {
         <button className={`tab ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>Notes</button>
         <button className={`tab ${activeTab === 'photos' ? 'active' : ''}`} onClick={() => setActiveTab('photos')}>Photos</button>
         <button className={`tab ${activeTab === 'visits' ? 'active' : ''}`} onClick={() => setActiveTab('visits')}>Visites</button>
+        <button className={`tab ${activeTab === 'lots' ? 'active' : ''}`} onClick={() => setActiveTab('lots')}>Lots</button>
         <button className={`tab ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>Commandes</button>
       </div>
 
@@ -144,6 +146,7 @@ export default function ClientDetailPage() {
         {activeTab === 'notes' && id && <NotesSection clientId={id} />}
         {activeTab === 'photos' && id && <PhotosSection clientId={id} />}
         {activeTab === 'visits' && id && <VisitsSection clientId={id} />}
+        {activeTab === 'lots' && id && <LotsSection clientId={id} />}
         {activeTab === 'orders' && (
           <div className="empty-state">
             <p>Module commandes à venir</p>

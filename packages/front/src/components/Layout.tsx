@@ -8,6 +8,8 @@ import {
   Map,
   LogOut,
   Menu,
+  ScanLine,
+  FileSearch,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -16,6 +18,8 @@ const navItems = [
   { to: '/clients', icon: Users, label: 'Clients' },
   { to: '/calendar', icon: Calendar, label: 'Calendrier' },
   { to: '/map', icon: Map, label: 'Carte' },
+  { to: '/scanner', icon: ScanLine, label: 'Scanner' },
+  { to: '/traceability', icon: FileSearch, label: 'Traçabilité' },
 ];
 
 export default function Layout() {

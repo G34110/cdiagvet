@@ -14,6 +14,7 @@ import { NotesModule } from './modules/notes/notes.module';
 import { PhotosModule } from './modules/photos/photos.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { FilieresModule } from './modules/filieres/filieres.module';
+import { LotsModule } from './modules/lots/lots.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { FilieresModule } from './modules/filieres/filieres.module';
     PhotosModule,
     UploadsModule,
     FilieresModule,
+    LotsModule,
   ],
 })
 export class AppModule {}

@@ -1,6 +1,6 @@
 import { useQuery } from '@apollo/client';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Upload } from 'lucide-react';
+import { Plus, Search, Upload, Download } from 'lucide-react';
 import { useState } from 'react';
 import { MY_CLIENTS_QUERY, CLIENT_STATS_QUERY, FILIERES_QUERY } from '../graphql/clients';
 
@@ -67,6 +67,29 @@ export default function ClientsPage() {
     );
   };
 
+  const handleExport = async (format: 'csv' | 'json') => {
+    const token = localStorage.getItem('accessToken');
+    const params = new URLSearchParams();
+    params.set('format', format);
+    if (selectedFilieres.length > 0) {
+      params.set('filiereIds', selectedFilieres.join(','));
+    }
+    
+    const response = await fetch(`http://localhost:3000/clients/export?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `clients.${format}`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    }
+  };
+
   return (
     <div className="clients-page">
       {stats && (
@@ -89,6 +112,20 @@ export default function ClientsPage() {
       <header className="page-header">
         <h1>Mes Clients</h1>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button 
+            onClick={() => handleExport('csv')} 
+            className="btn-secondary" 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Download size={18} /> CSV
+          </button>
+          <button 
+            onClick={() => handleExport('json')} 
+            className="btn-secondary" 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Download size={18} /> JSON
+          </button>
           <Link to="/clients/import" className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Upload size={18} /> Importer
           </Link>

@@ -10,6 +10,9 @@ import NewClientPage from './pages/NewClientPage';
 import CalendarPage from './pages/CalendarPage';
 import MapPage from './pages/MapPage';
 import ImportClientsPage from './pages/ImportClientsPage';
+import ScannerPage from './pages/ScannerPage';
+import AssociateLotPage from './pages/AssociateLotPage';
+import LotTraceabilityPage from './pages/LotTraceabilityPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const auth = useRecoilValue(authState);
@@ -36,6 +39,9 @@ function App() {
         <Route path="clients/:id" element={<ClientDetailPage />} />
         <Route path="calendar" element={<CalendarPage />} />
         <Route path="map" element={<MapPage />} />
+        <Route path="scanner" element={<ScannerPage />} />
+        <Route path="scanner/associate/:lotId" element={<AssociateLotPage />} />
+        <Route path="traceability" element={<LotTraceabilityPage />} />
       </Route>
     </Routes>
   );

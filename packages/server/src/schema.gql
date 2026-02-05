@@ -2,6 +2,13 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AssociateLotClientInput {
+  clientId: String!
+  deliveryDate: DateTime
+  lotId: String!
+  quantity: Int = 1
+}
+
 type AuthPayload {
   accessToken: String!
   user: UserPayload!
@@ -99,7 +106,37 @@ input LoginInput {
   password: String!
 }
 
+type Lot {
+  createdAt: DateTime!
+  expirationDate: DateTime
+  id: ID!
+  lotNumber: String!
+  product: Product!
+  rawBarcode: String
+}
+
+type LotClient {
+  clientAddress: String
+  clientCity: String
+  clientId: String!
+  clientName: String
+  clientPostalCode: String
+  createdAt: DateTime!
+  deliveryDate: DateTime!
+  id: ID!
+  lot: Lot!
+  quantity: Int!
+}
+
+type LotTraceability {
+  clientCount: Int!
+  deliveries: [LotClient!]!
+  lot: Lot!
+  totalQuantity: Int!
+}
+
 type Mutation {
+  associateLotToClient(input: AssociateLotClientInput!): LotClient!
   createClient(input: CreateClientInput!): Client!
   createNote(input: CreateNoteInput!): Note!
   createPhoto(input: CreatePhotoInput!): Photo!
@@ -109,6 +146,7 @@ type Mutation {
   deletePhoto(id: String!): Photo!
   deleteVisit(id: String!): Visit!
   login(input: LoginInput!): AuthPayload!
+  scanBarcode(input: ScanBarcodeInput!): ScanResult!
   updateClient(id: String!, input: UpdateClientInput!): Client!
   updateNote(id: String!, input: UpdateNoteInput!): Note!
   updateVisit(id: String!, input: UpdateVisitInput!): Visit!
@@ -138,8 +176,17 @@ type Photo {
   visitId: String!
 }
 
+type Product {
+  createdAt: DateTime!
+  gtin: String!
+  id: ID!
+  name: String!
+}
+
 type Query {
+  allLots(search: String): [Lot!]!
   client(id: String!): Client!
+  clientLots(clientId: ID!): [LotClient!]!
   clientNotes(clientId: String!): [Note!]!
   clientPhotos(clientId: String!): [Photo!]!
   clientStats: ClientStats!
@@ -147,14 +194,33 @@ type Query {
   clients(filter: ClientsFilterInput): ClientsResponse!
   clientsForMap: [ClientMapItem!]!
   filieres: [Filiere!]!
+  lot(id: ID!): Lot
+  lotTraceability(lotId: ID!): LotTraceability!
   me: User!
   myClients(filter: ClientsFilterInput): [Client!]!
   myVisits(filter: VisitsFilterInput): [Visit!]!
   note(id: String!): Note!
+  searchLots(query: String!): [Lot!]!
   todayVisits: [Visit!]!
   upcomingVisits(days: Int = 7): [Visit!]!
   visit(id: String!): Visit!
   visitPhotos(visitId: String!): [Photo!]!
+}
+
+input ScanBarcodeInput {
+  barcode: String!
+  productName: String
+}
+
+type ScanResult {
+  expirationDate: DateTime
+  gtin: String
+  isNewProduct: Boolean!
+  lot: Lot
+  lotNumber: String
+  message: String
+  productName: String
+  success: Boolean!
 }
 
 input UpdateClientInput {

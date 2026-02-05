@@ -1,12 +1,16 @@
 import {
   Controller,
   Post,
+  Get,
+  Query,
+  Res,
   UseInterceptors,
   UploadedFile,
   UseGuards,
   Request,
   BadRequestException,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ClientsService } from './clients.service';
@@ -102,5 +106,79 @@ export class ClientsController {
     }
 
     return result;
+  }
+
+  @Get('export')
+  async exportClients(
+    @Query('format') format: string = 'csv',
+    @Query('filiereIds') filiereIds: string,
+    @Query('isActive') isActive: string,
+    @Request() req: any,
+    @Res() res: Response,
+  ) {
+    const tenantId = req.user.tenantId;
+    
+    // Build filter
+    const filter: any = {};
+    if (filiereIds) {
+      filter.filiereIds = filiereIds.split(',');
+    }
+    if (isActive !== undefined && isActive !== '') {
+      filter.isActive = isActive === 'true';
+    }
+
+    // Get clients based on user role
+    let clients: any[];
+    if (req.user.role === 'ADMIN') {
+      // Admin can export all clients
+      const result = await this.clientsService.findAll(tenantId, filter);
+      clients = result.clients;
+    } else {
+      // Commercial exports only their clients
+      clients = await this.clientsService.findByCommercial(req.user.id, filter);
+    }
+
+    if (format === 'json') {
+      const jsonData = clients.map((c: any) => ({
+        name: c.name,
+        address: c.address || '',
+        city: c.city || '',
+        postalCode: c.postalCode || '',
+        phone: c.phone || '',
+        email: c.email || '',
+        filieres: c.filieres?.map((f: any) => f.name).join(',') || '',
+        isActive: c.isActive,
+        latitude: c.latitude || '',
+        longitude: c.longitude || '',
+      }));
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename=clients.json');
+      return res.send(JSON.stringify(jsonData, null, 2));
+    }
+
+    // Default: CSV format
+    const header = 'name;address;city;postalCode;phone;email;filieres;isActive;latitude;longitude';
+    const rows = clients.map((c: any) => {
+      const filiereNames = c.filieres?.map((f: any) => f.name).join(',') || '';
+      return [
+        c.name || '',
+        c.address || '',
+        c.city || '',
+        c.postalCode || '',
+        c.phone || '',
+        c.email || '',
+        filiereNames,
+        c.isActive ? 'true' : 'false',
+        c.latitude || '',
+        c.longitude || '',
+      ].join(';');
+    });
+
+    const csvContent = [header, ...rows].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=clients.csv');
+    return res.send('\uFEFF' + csvContent); // BOM for Excel UTF-8
   }
 }
