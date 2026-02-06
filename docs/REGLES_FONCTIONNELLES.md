@@ -290,8 +290,8 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT6.1.3 | Ne pas sélectionner de client et valider | Message d'erreur, le champ client est obligatoire |
 | CT6.1.4 | Vérifier que seuls les clients du commercial sont listés | Le dropdown ne contient que les clients assignés au commercial |
 
-### R6.2 - Vue Pipeline Kanban
-**Description:** Les opportunités sont affichées dans un tableau Kanban avec les colonnes correspondant aux étapes du cycle de vente.
+### R6.2 - Vue Pipeline Kanban avec Drag-and-Drop
+**Description:** Les opportunités sont affichées dans un tableau Kanban avec les colonnes correspondant aux étapes du cycle de vente. L'utilisateur peut glisser-déposer les cartes pour changer leur statut.
 
 | Étape | Probabilité par défaut |
 |-------|------------------------|
@@ -304,11 +304,14 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 
 | Cas de test | Actions | Résultat attendu |
 |-------------|---------|------------------|
-| CT6.2.1 | Accéder à la page Pipeline | Les opportunités sont affichées en colonnes par statut |
+| CT6.2.1 | Accéder à la page Opportunités | Les opportunités sont affichées en colonnes par statut |
 | CT6.2.2 | Vérifier le total par colonne | Le montant total des opportunités de chaque colonne est affiché |
 | CT6.2.3 | Cliquer sur une carte opportunité | Navigation vers le détail de l'opportunité |
-| CT6.2.4 | En tant que Commercial, vérifier les opportunités affichées | Seules MES opportunités sont visibles |
-| CT6.2.5 | En tant que Responsable Filière, vérifier les opportunités | Toutes les opportunités de MA FILIÈRE sont visibles |
+| CT6.2.4 | Glisser une carte de "Nouveau" vers "Qualification" | La carte se déplace, le statut est mis à jour, la probabilité passe à 25% |
+| CT6.2.5 | Glisser une carte vers "Gagné" | La carte passe en statut Gagné, probabilité 100% |
+| CT6.2.6 | Vérifier le feedback visuel pendant le drag | La carte a une ombre, la colonne cible est surlignée |
+| CT6.2.7 | En tant que Commercial, vérifier les opportunités affichées | Seules MES opportunités sont visibles |
+| CT6.2.8 | En tant que Responsable Filière, vérifier les opportunités | Toutes les opportunités de MA FILIÈRE sont visibles |
 
 ### R6.3 - Consultation et modification d'opportunité
 **Description:** Un commercial peut consulter le détail d'une opportunité et modifier ses informations.

@@ -19,6 +19,15 @@ const STATUS_PROBABILITY: Record<string, number> = {
   PERDU: 0,
 };
 
+const STATUS_ORDER: Record<string, number> = {
+  NOUVEAU: 0,
+  QUALIFICATION: 1,
+  PROPOSITION: 2,
+  NEGOCIATION: 3,
+  GAGNE: 4,
+  PERDU: 5,
+};
+
 @Injectable()
 export class OpportunitiesService {
   constructor(private prisma: PrismaService) {}
@@ -183,18 +192,33 @@ export class OpportunitiesService {
     if (input.notes !== undefined) updateData.notes = input.notes;
     if (input.ownerId !== undefined) updateData.ownerId = input.ownerId;
 
-    // Handle status change with probability update
-    if (input.status !== undefined) {
+    // Handle status change with probability history tracking
+    if (input.status !== undefined && input.status !== existing.status) {
+      // Save current probability to history for current status before changing
+      const history = (existing.probabilityHistory as Record<string, number>) || {};
+      history[existing.status] = existing.probability;
+      updateData.probabilityHistory = history;
+      
       updateData.status = input.status;
+      
+      // Check if we have a saved probability for the new status
       if (!input.probability) {
-        updateData.probability = STATUS_PROBABILITY[input.status] ?? existing.probability;
+        if (history[input.status] !== undefined) {
+          // Restore saved probability for this status
+          updateData.probability = history[input.status];
+        } else {
+          // No history: use default probability for the new status
+          updateData.probability = STATUS_PROBABILITY[input.status] ?? existing.probability;
+        }
       }
+      
       if (input.status === 'PERDU') {
         updateData.lostReason = input.lostReason;
         updateData.lostComment = input.lostComment;
       }
     }
 
+    // Explicit probability update always takes precedence
     if (input.probability !== undefined) updateData.probability = input.probability;
 
     const opportunity = await this.prisma.opportunity.update({

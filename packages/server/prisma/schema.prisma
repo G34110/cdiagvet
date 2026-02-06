@@ -278,6 +278,7 @@ model Opportunity {
   source          OpportunitySource
   amount          Float
   probability     Int               @default(10)
+  probabilityHistory Json?          @map("probability_history")
   expectedCloseDate DateTime        @map("expected_close_date")
   status          OpportunityStatus @default(NOUVEAU)
   lostReason      String?           @map("lost_reason")

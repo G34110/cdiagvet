@@ -109,6 +109,18 @@
   transform: translateY(-2px);
 }
 
+.opportunity-card.dragging {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  transform: rotate(3deg);
+  opacity: 0.9;
+}
+
+.column-cards.dragging-over {
+  background: rgba(59, 130, 246, 0.1);
+  border: 2px dashed var(--primary);
+  border-radius: 0.5rem;
+}
+
 .card-client {
   font-size: 0.75rem;
   color: var(--text-secondary);

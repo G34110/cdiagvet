@@ -31,7 +31,7 @@ async function main() {
     },
   });
 
-  // Create commercial user
+  // Create commercial users
   const commercial = await prisma.user.upsert({
     where: { email: 'commercial@cdiagvet.local' },
     update: {},
@@ -40,6 +40,32 @@ async function main() {
       passwordHash: hashedPassword,
       firstName: 'Jean',
       lastName: 'Dupont',
+      role: 'COMMERCIAL',
+      tenantId: tenant.id,
+    },
+  });
+
+  const commercial2 = await prisma.user.upsert({
+    where: { email: 'commercial2@cdiagvet.local' },
+    update: {},
+    create: {
+      email: 'commercial2@cdiagvet.local',
+      passwordHash: hashedPassword,
+      firstName: 'Marc',
+      lastName: 'Leroy',
+      role: 'COMMERCIAL',
+      tenantId: tenant.id,
+    },
+  });
+
+  const commercial3 = await prisma.user.upsert({
+    where: { email: 'commercial3@cdiagvet.local' },
+    update: {},
+    create: {
+      email: 'commercial3@cdiagvet.local',
+      passwordHash: hashedPassword,
+      firstName: 'Anne',
+      lastName: 'Girard',
       role: 'COMMERCIAL',
       tenantId: tenant.id,
     },
@@ -208,7 +234,10 @@ async function main() {
   console.log('✅ Seed data created:');
   console.log(`   - Tenant: ${tenant.name}`);
   console.log(`   - Admin: ${admin.email}`);
-  console.log(`   - Commercial: ${commercial.email}`);
+  console.log(`   - Commerciaux:`);
+  console.log(`      • ${commercial.email} (${commercial.firstName} ${commercial.lastName})`);
+  console.log(`      • ${commercial2.email} (${commercial2.firstName} ${commercial2.lastName})`);
+  console.log(`      • ${commercial3.email} (${commercial3.firstName} ${commercial3.lastName})`);
   console.log(`   - Responsables Filière: ${responsables.length}`);
   responsablesData.forEach(r => console.log(`      • ${r.email} (${r.codes.join(', ')})`));
   console.log(`   - Filières: ${filieresData.length}`);

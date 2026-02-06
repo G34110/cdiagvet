@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import { useNavigate } from 'react-router-dom';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Plus, Target, Euro, Calendar, User } from 'lucide-react';
-import { OPPORTUNITIES_QUERY, CREATE_OPPORTUNITY_MUTATION } from '../graphql/opportunities';
+import { OPPORTUNITIES_QUERY, CREATE_OPPORTUNITY_MUTATION, UPDATE_OPPORTUNITY_STATUS_MUTATION } from '../graphql/opportunities';
 import OpportunityForm from '../components/OpportunityForm';
 import './PipelinePage.css';
 
@@ -42,6 +43,7 @@ export default function PipelinePage() {
 
   const { data, loading, refetch } = useQuery<{ opportunities: Opportunity[] }>(OPPORTUNITIES_QUERY);
   const [createOpportunity, { loading: creating }] = useMutation(CREATE_OPPORTUNITY_MUTATION);
+  const [updateStatus] = useMutation(UPDATE_OPPORTUNITY_STATUS_MUTATION);
 
   const opportunities = data?.opportunities || [];
 
@@ -85,6 +87,31 @@ export default function PipelinePage() {
   const formatDate = (dateStr: string) => 
     new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
+  const handleDragEnd = async (result: DropResult) => {
+    const { destination, source, draggableId } = result;
+
+    // Dropped outside a valid area
+    if (!destination) return;
+
+    // Dropped in same position
+    if (destination.droppableId === source.droppableId) return;
+
+    const newStatus = destination.droppableId;
+    
+    try {
+      await updateStatus({
+        variables: {
+          id: draggableId,
+          status: newStatus,
+        },
+      });
+      refetch();
+    } catch (error: any) {
+      console.error('Erreur changement statut:', error);
+      alert(`Erreur: ${error?.message || 'Erreur lors du changement de statut'}`);
+    }
+  };
+
   if (loading) {
     return <div className="loading">Chargement des opportunités...</div>;
   }
@@ -115,59 +142,76 @@ export default function PipelinePage() {
         </div>
       )}
 
-      <div className="pipeline-board">
-        {STATUSES.filter(s => s.key !== 'PERDU').map(status => {
-          const statusOpps = getOpportunitiesByStatus(status.key);
-          const total = getStatusTotal(status.key);
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="pipeline-board">
+          {STATUSES.filter(s => s.key !== 'PERDU').map(status => {
+            const statusOpps = getOpportunitiesByStatus(status.key);
+            const total = getStatusTotal(status.key);
 
-          return (
-            <div key={status.key} className="pipeline-column">
-              <div className="column-header" style={{ borderTopColor: status.color }}>
-                <div className="column-title">
-                  <span className="status-dot" style={{ background: status.color }} />
-                  {status.label}
-                  <span className="count">{statusOpps.length}</span>
-                </div>
-                <div className="column-total">{formatCurrency(total)}</div>
-              </div>
-
-              <div className="column-cards">
-                {statusOpps.map(opp => (
-                  <div
-                    key={opp.id}
-                    className="opportunity-card"
-                    onClick={() => navigate(`/pipeline/${opp.id}`)}
-                  >
-                    <div className="card-client">{opp.client.name}</div>
-                    <div className="card-title">{opp.title}</div>
-                    <div className="card-meta">
-                      <span className="card-amount">
-                        <Euro size={14} />
-                        {formatCurrency(opp.amount)}
-                      </span>
-                      <span className="card-probability">
-                        {opp.probability}%
-                      </span>
-                      <span className="card-date">
-                        <Calendar size={14} />
-                        {formatDate(opp.expectedCloseDate)}
-                      </span>
-                    </div>
-                    <div className="card-owner">
-                      <User size={14} />
-                      {opp.owner.firstName} {opp.owner.lastName}
-                    </div>
+            return (
+              <div key={status.key} className="pipeline-column">
+                <div className="column-header" style={{ borderTopColor: status.color }}>
+                  <div className="column-title">
+                    <span className="status-dot" style={{ background: status.color }} />
+                    {status.label}
+                    <span className="count">{statusOpps.length}</span>
                   </div>
-                ))}
+                  <div className="column-total">{formatCurrency(total)}</div>
+                </div>
 
-                {statusOpps.length === 0 && (
-                  <div className="empty-column">Aucune opportunité</div>
-                )}
+                <Droppable droppableId={status.key}>
+                  {(provided, snapshot) => (
+                    <div
+                      className={`column-cards ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                    >
+                      {statusOpps.map((opp, index) => (
+                        <Draggable key={opp.id} draggableId={opp.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`opportunity-card ${snapshot.isDragging ? 'dragging' : ''}`}
+                              onClick={() => navigate(`/pipeline/${opp.id}`)}
+                            >
+                              <div className="card-client">{opp.client.name}</div>
+                              <div className="card-title">{opp.title}</div>
+                              <div className="card-meta">
+                                <span className="card-amount">
+                                  <Euro size={14} />
+                                  {formatCurrency(opp.amount)}
+                                </span>
+                                <span className="card-probability">
+                                  {opp.probability}%
+                                </span>
+                                <span className="card-date">
+                                  <Calendar size={14} />
+                                  {formatDate(opp.expectedCloseDate)}
+                                </span>
+                              </div>
+                              <div className="card-owner">
+                                <User size={14} />
+                                {opp.owner.firstName} {opp.owner.lastName}
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+
+                      {statusOpps.length === 0 && !snapshot.isDraggingOver && (
+                        <div className="empty-column">Aucune opportunité</div>
+                      )}
+                    </div>
+                  )}
+                </Droppable>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </DragDropContext>
 
       <div className="pipeline-lost">
         <h3>Perdues ({getOpportunitiesByStatus('PERDU').length})</h3>
