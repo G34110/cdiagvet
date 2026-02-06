@@ -154,3 +154,36 @@ export const UPDATE_OPPORTUNITY_STATUS_MUTATION = gql`
     }
   }
 `;
+
+export const ASSIGN_OPPORTUNITY_MUTATION = gql`
+  mutation AssignOpportunity($opportunityId: String!, $newOwnerId: String!) {
+    assignOpportunity(opportunityId: $opportunityId, newOwnerId: $newOwnerId) {
+      id
+      owner {
+        id
+        firstName
+        lastName
+        email
+      }
+    }
+  }
+`;
+
+export const COMMERCIALS_FOR_ASSIGNMENT_QUERY = gql`
+  query CommercialsForAssignment {
+    commercialsForAssignment {
+      id
+      firstName
+      lastName
+      email
+    }
+  }
+`;
+
+export const DELETE_OPPORTUNITY_MUTATION = gql`
+  mutation DeleteOpportunity($id: String!) {
+    deleteOpportunity(id: $id) {
+      id
+    }
+  }
+`;

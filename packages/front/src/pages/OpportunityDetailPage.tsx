@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { ArrowLeft, Edit2, Save, X, Target, User, Calendar, Euro, TrendingUp } from 'lucide-react';
-import { OPPORTUNITY_QUERY, UPDATE_OPPORTUNITY_MUTATION } from '../graphql/opportunities';
+import { ArrowLeft, Edit2, Save, X, Target, User, Calendar, Euro, TrendingUp, Trash2 } from 'lucide-react';
+import { OPPORTUNITY_QUERY, UPDATE_OPPORTUNITY_MUTATION, ASSIGN_OPPORTUNITY_MUTATION, COMMERCIALS_FOR_ASSIGNMENT_QUERY, DELETE_OPPORTUNITY_MUTATION } from '../graphql/opportunities';
+import { useRecoilValue } from 'recoil';
+import { authState } from '../state/auth';
 import './OpportunityDetailPage.css';
 
 interface Opportunity {
@@ -33,6 +35,13 @@ interface Opportunity {
     lastName: string;
     email: string;
   };
+}
+
+interface Commercial {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
 }
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -73,6 +82,18 @@ export default function OpportunityDetailPage() {
   });
 
   const [updateOpportunity, { loading: updating }] = useMutation(UPDATE_OPPORTUNITY_MUTATION);
+  const [assignOpportunity, { loading: assigning }] = useMutation(ASSIGN_OPPORTUNITY_MUTATION);
+  const [deleteOpportunity, { loading: deleting }] = useMutation(DELETE_OPPORTUNITY_MUTATION);
+
+  const auth = useRecoilValue(authState);
+  const canAssign = auth.user?.role === 'ADMIN' || auth.user?.role === 'RESPONSABLE_FILIERE';
+  const canDelete = auth.user?.role === 'ADMIN' || auth.user?.role === 'RESPONSABLE_FILIERE';
+
+  const { data: commercialsData } = useQuery<{ commercialsForAssignment: Commercial[] }>(
+    COMMERCIALS_FOR_ASSIGNMENT_QUERY,
+    { skip: !canAssign }
+  );
+  const commercials = commercialsData?.commercialsForAssignment || [];
 
   const opportunity = data?.opportunity;
 
@@ -162,10 +183,31 @@ export default function OpportunityDetailPage() {
               </button>
             </>
           ) : (
-            <button className="btn-primary" onClick={startEditing}>
-              <Edit2 size={18} />
-              Modifier
-            </button>
+            <>
+              <button className="btn-primary" onClick={startEditing}>
+                <Edit2 size={18} />
+                Modifier
+              </button>
+              {canDelete && (
+                <button
+                  className="btn-danger"
+                  onClick={async () => {
+                    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette opportunité ?')) {
+                      try {
+                        await deleteOpportunity({ variables: { id: opportunity.id } });
+                        navigate('/pipeline');
+                      } catch (error: any) {
+                        alert(`Erreur: ${error?.message || 'Erreur lors de la suppression'}`);
+                      }
+                    }
+                  }}
+                  disabled={deleting}
+                >
+                  <Trash2 size={18} />
+                  {deleting ? 'Suppression...' : 'Supprimer'}
+                </button>
+              )}
+            </>
           )}
         </div>
       </header>
@@ -302,10 +344,40 @@ export default function OpportunityDetailPage() {
             </div>
             <div className="info-item">
               <label>Propriétaire</label>
-              <span>
-                <User size={14} style={{ marginRight: '0.5rem' }} />
-                {opportunity.owner.firstName} {opportunity.owner.lastName}
-              </span>
+              {isEditing && canAssign ? (
+                <div className="owner-select-wrapper">
+                  <User size={14} />
+                  <select
+                    value={opportunity.owner.id}
+                    onChange={async (e) => {
+                      try {
+                        await assignOpportunity({
+                          variables: {
+                            opportunityId: opportunity.id,
+                            newOwnerId: e.target.value,
+                          },
+                        });
+                        refetch();
+                      } catch (error: any) {
+                        alert(`Erreur: ${error?.message || 'Erreur lors de la réassignation'}`);
+                      }
+                    }}
+                    disabled={assigning}
+                    className="owner-select"
+                  >
+                    {commercials.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <span>
+                  <User size={14} style={{ marginRight: '0.5rem' }} />
+                  {opportunity.owner.firstName} {opportunity.owner.lastName}
+                </span>
+              )}
             </div>
           </div>
         </section>

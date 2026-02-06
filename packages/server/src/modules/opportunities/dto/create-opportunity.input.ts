@@ -57,4 +57,9 @@ export class CreateOpportunityInput {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  ownerId?: string;
 }

@@ -142,6 +142,22 @@ export class OpportunitiesService {
 
     const probability = input.probability ?? STATUS_PROBABILITY['NOUVEAU'];
 
+    // Admin/Responsable can assign to a specific commercial, otherwise self
+    let ownerId = ctx.userId;
+    if (input.ownerId && (ctx.role === 'ADMIN' || ctx.role === 'RESPONSABLE_FILIERE')) {
+      // Verify the target owner exists and is a commercial
+      const targetOwner = await this.prisma.user.findFirst({
+        where: {
+          id: input.ownerId,
+          tenantId: ctx.tenantId,
+          role: 'COMMERCIAL',
+        },
+      });
+      if (targetOwner) {
+        ownerId = input.ownerId;
+      }
+    }
+
     const opportunity = await this.prisma.opportunity.create({
       data: {
         title: input.title,
@@ -154,7 +170,7 @@ export class OpportunitiesService {
         expectedCloseDate: new Date(input.expectedCloseDate),
         notes: input.notes,
         clientId: input.clientId,
-        ownerId: ctx.userId,
+        ownerId,
         tenantId: ctx.tenantId,
       },
       include: {
@@ -295,5 +311,97 @@ export class OpportunitiesService {
       conversionRate,
       countByStatus,
     };
+  }
+
+  async assignOpportunity(ctx: OpportunityContext, opportunityId: string, newOwnerId: string) {
+    // Only Responsable filière or Admin can reassign
+    if (ctx.role !== 'RESPONSABLE_FILIERE' && ctx.role !== 'ADMIN') {
+      throw new ForbiddenException('Seul un responsable filière ou admin peut réassigner une opportunité');
+    }
+
+    // Get the opportunity
+    const opportunity = await this.findOne(ctx, opportunityId);
+
+    // If same owner, no change needed
+    if (opportunity.ownerId === newOwnerId) {
+      return opportunity;
+    }
+
+    // Verify the new owner exists and is a commercial in the same tenant
+    const newOwner = await this.prisma.user.findFirst({
+      where: {
+        id: newOwnerId,
+        tenantId: ctx.tenantId,
+        role: 'COMMERCIAL',
+      },
+    });
+
+    if (!newOwner) {
+      throw new ForbiddenException('Commercial non trouvé ou non autorisé');
+    }
+
+    // Update the opportunity with new owner
+    const updated = await this.prisma.opportunity.update({
+      where: { id: opportunityId },
+      data: {
+        previousOwnerId: opportunity.ownerId,
+        ownerChangedAt: new Date(),
+        ownerId: newOwnerId,
+      },
+      include: {
+        client: true,
+        owner: true,
+        lines: true,
+      },
+    });
+
+    return {
+      ...updated,
+      weightedAmount: updated.amount * (updated.probability / 100),
+      lines: updated.lines.map((line: any) => ({
+        ...line,
+        total: line.quantity * line.unitPrice,
+      })),
+    };
+  }
+
+  async getCommercialsForAssignment(ctx: OpportunityContext) {
+    // Get all commercials in the tenant
+    const commercials = await this.prisma.user.findMany({
+      where: {
+        tenantId: ctx.tenantId,
+        role: 'COMMERCIAL',
+        isActive: true,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+      },
+      orderBy: [
+        { lastName: 'asc' },
+        { firstName: 'asc' },
+      ],
+    });
+
+    return commercials;
+  }
+
+  async delete(ctx: OpportunityContext, id: string) {
+    // Only Admin or Responsable filière can delete
+    if (ctx.role !== 'ADMIN' && ctx.role !== 'RESPONSABLE_FILIERE') {
+      throw new ForbiddenException('Seul un admin ou responsable filière peut supprimer une opportunité');
+    }
+
+    // Verify opportunity exists and is accessible
+    const opportunity = await this.findOne(ctx, id);
+
+    // Delete the opportunity (lines are deleted via cascade)
+    await this.prisma.opportunity.delete({
+      where: { id },
+    });
+
+    return opportunity;
   }
 }

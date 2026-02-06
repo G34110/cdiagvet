@@ -293,6 +293,9 @@ model Opportunity {
   ownerId         String            @map("owner_id")
   owner           User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
 
+  previousOwnerId String?           @map("previous_owner_id")
+  ownerChangedAt  DateTime?         @map("owner_changed_at")
+
   tenantId        String            @map("tenant_id")
 
   lines           OpportunityLine[]

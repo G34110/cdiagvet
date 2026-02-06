@@ -73,6 +73,13 @@ type ClientsResponse {
   total: Int!
 }
 
+type CommercialUser {
+  email: String!
+  firstName: String!
+  id: ID!
+  lastName: String!
+}
+
 input CreateClientInput {
   addressLine1: String
   addressLine2: String
@@ -100,6 +107,7 @@ input CreateOpportunityInput {
   contactPhone: String
   expectedCloseDate: String!
   notes: String
+  ownerId: String
   probability: Int
   source: String!
   title: String!
@@ -191,6 +199,7 @@ type LotTraceability {
 }
 
 type Mutation {
+  assignOpportunity(newOwnerId: String!, opportunityId: String!): Opportunity!
   associateLotToClient(input: AssociateLotClientInput!): LotClient!
   createClient(input: CreateClientInput!): Client!
   createNote(input: CreateNoteInput!): Note!
@@ -200,6 +209,7 @@ type Mutation {
   deleteAllClients: Int!
   deleteClient(id: String!): Client!
   deleteNote(id: String!): Note!
+  deleteOpportunity(id: String!): Opportunity!
   deletePhoto(id: String!): Photo!
   deleteVisit(id: String!): Visit!
   login(input: LoginInput!): AuthPayload!
@@ -314,6 +324,7 @@ type Query {
   clientVisits(clientId: String!): [Visit!]!
   clients(filter: ClientsFilterInput): ClientsResponse!
   clientsForMap: [ClientMapItem!]!
+  commercialsForAssignment: [CommercialUser!]!
   dashboardData(filter: DashboardFilterInput): DashboardData!
   filieres: [Filiere!]!
   lot(id: ID!): Lot

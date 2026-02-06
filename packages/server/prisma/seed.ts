@@ -234,10 +234,7 @@ async function main() {
   console.log('✅ Seed data created:');
   console.log(`   - Tenant: ${tenant.name}`);
   console.log(`   - Admin: ${admin.email}`);
-  console.log(`   - Commerciaux:`);
-  console.log(`      • ${commercial.email} (${commercial.firstName} ${commercial.lastName})`);
-  console.log(`      • ${commercial2.email} (${commercial2.firstName} ${commercial2.lastName})`);
-  console.log(`      • ${commercial3.email} (${commercial3.firstName} ${commercial3.lastName})`);
+  console.log(`   - Commercial: ${commercial.email}`);
   console.log(`   - Responsables Filière: ${responsables.length}`);
   responsablesData.forEach(r => console.log(`      • ${r.email} (${r.codes.join(', ')})`));
   console.log(`   - Filières: ${filieresData.length}`);

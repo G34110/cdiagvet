@@ -57,6 +57,21 @@ export class OpportunityOwner {
 }
 
 @ObjectType()
+export class CommercialUser {
+  @Field(() => ID)
+  id: string;
+
+  @Field()
+  firstName: string;
+
+  @Field()
+  lastName: string;
+
+  @Field()
+  email: string;
+}
+
+@ObjectType()
 export class OpportunityClient {
   @Field(() => ID)
   id: string;

@@ -3,7 +3,7 @@ import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { OpportunitiesService } from './opportunities.service';
-import { Opportunity } from './entities/opportunity.entity';
+import { Opportunity, CommercialUser } from './entities/opportunity.entity';
 import { CreateOpportunityInput } from './dto/create-opportunity.input';
 import { UpdateOpportunityInput } from './dto/update-opportunity.input';
 
@@ -112,6 +112,50 @@ export class OpportunitiesResolver {
       status,
       lostReason,
       lostComment,
+    );
+  }
+
+  @Mutation(() => Opportunity)
+  async assignOpportunity(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('opportunityId') opportunityId: string,
+    @Args('newOwnerId') newOwnerId: string,
+  ) {
+    return this.opportunitiesService.assignOpportunity(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      opportunityId,
+      newOwnerId,
+    );
+  }
+
+  @Query(() => [CommercialUser], { name: 'commercialsForAssignment' })
+  async getCommercialsForAssignment(@CurrentUser() user: CurrentUserPayload) {
+    return this.opportunitiesService.getCommercialsForAssignment({
+      tenantId: user.tenantId,
+      userId: user.id,
+      role: user.role,
+      filiereIds: user.filiereIds,
+    });
+  }
+
+  @Mutation(() => Opportunity)
+  async deleteOpportunity(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('id') id: string,
+  ) {
+    return this.opportunitiesService.delete(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      id,
     );
   }
 }

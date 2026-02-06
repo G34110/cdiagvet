@@ -334,6 +334,40 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT6.3.5 | En tant que non-propriétaire, tenter de modifier | L'édition est refusée (lecture seule) |
 | CT6.3.6 | Vérifier l'affichage du montant pondéré | Montant × Probabilité est affiché correctement |
 
+### R6.4 - Assignation & réassignation d'opportunité
+**Description:** Un Responsable filière ou Admin peut assigner ou réassigner une opportunité à un commercial.
+
+| Règle | Description |
+|-------|-------------|
+| **Rôles autorisés** | Responsable filière, Admin |
+| **Commercial cible** | Doit appartenir au même tenant |
+| **Historique** | Le précédent propriétaire est conservé dans l'historique |
+| **Notification** | Le nouveau propriétaire est notifié (future) |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.4.1 | En tant que Responsable filière, accéder au détail d'une opportunité | Un sélecteur de commercial est visible dans le champ "Propriétaire" |
+| CT6.4.2 | Changer le propriétaire via le sélecteur | L'opportunité est réassignée au nouveau commercial |
+| CT6.4.3 | Vérifier l'opportunité avec le nouveau propriétaire | L'opportunité apparaît dans le pipeline du nouveau commercial |
+| CT6.4.4 | En tant que Commercial, accéder au détail d'une opportunité | Le champ "Propriétaire" est en lecture seule (pas de sélecteur) |
+| CT6.4.5 | Tenter d'assigner à un commercial hors tenant | L'action est refusée avec message d'erreur |
+
+### R6.5 - Suppression d'opportunité
+**Description:** Un Admin ou Responsable filière peut supprimer une opportunité.
+
+| Règle | Description |
+|-------|-------------|
+| **Rôles autorisés** | Admin, Responsable filière |
+| **Confirmation** | Une confirmation est demandée avant suppression |
+| **Cascade** | Les lignes d'opportunité associées sont également supprimées |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.5.1 | En tant qu'Admin, cliquer sur "Supprimer" dans le détail d'une opportunité | Une demande de confirmation s'affiche |
+| CT6.5.2 | Confirmer la suppression | L'opportunité est supprimée, redirection vers le pipeline |
+| CT6.5.3 | Annuler la suppression | L'opportunité n'est pas supprimée |
+| CT6.5.4 | En tant que Commercial, accéder au détail d'une opportunité | Le bouton "Supprimer" n'est pas visible |
+
 ---
 
 ## 7. Interface Utilisateur

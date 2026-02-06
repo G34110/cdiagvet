@@ -171,11 +171,18 @@ export default function OpportunityForm({
             type="number"
             id="amount"
             name="amount"
-            value={formData.amount}
-            onChange={handleChange}
+            value={formData.amount || ''}
+            onChange={(e) => {
+              const val = e.target.value;
+              setFormData(prev => ({
+                ...prev,
+                amount: val === '' ? 0 : parseFloat(val),
+              }));
+            }}
             required
             min="0"
             step="0.01"
+            placeholder="0"
           />
         </div>
 
