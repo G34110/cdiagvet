@@ -248,6 +248,23 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT5.5.5 | Sélectionner "Personnalisé" puis choisir une date de début et de fin | Les champs de date apparaissent et les données sont filtrées sur la période choisie |
 | CT5.5.6 | Changer de période plusieurs fois | Les données se mettent à jour à chaque changement |
 
+### R5.6 - Génération de rapport personnalisé
+**Description:** L'utilisateur peut générer un rapport PDF ou Excel contenant les KPIs et l'évolution du CA pour la période sélectionnée.
+
+| Format | Contenu |
+|--------|---------|
+| **PDF** | Document formaté avec en-tête, KPIs en tableau, évolution CA, pied de page |
+| **Excel** | Classeur avec onglet KPIs et onglet CA par mois |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT5.6.1 | Cliquer sur "Exporter rapport" puis "Télécharger PDF" | Un fichier PDF est téléchargé avec les KPIs et graphiques |
+| CT5.6.2 | Cliquer sur "Exporter rapport" puis "Télécharger Excel" | Un fichier Excel est téléchargé avec 2 onglets |
+| CT5.6.3 | Sélectionner "Mois précédent" puis exporter | Le rapport mentionne "Mois précédent" et contient les données de cette période |
+| CT5.6.4 | Exporter avec période personnalisée | Le rapport mentionne les dates personnalisées |
+| CT5.6.5 | Vérifier le contenu du PDF | Le PDF contient: nom utilisateur, date de génération, KPIs, évolution CA |
+| CT5.6.6 | Vérifier le contenu de l'Excel | L'Excel contient 2 onglets: "KPIs" et "CA par Mois" avec les données |
+
 ---
 
 ## 6. Interface Utilisateur

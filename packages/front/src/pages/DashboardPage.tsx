@@ -7,6 +7,36 @@ import { Users, TrendingUp, AlertCircle, Package, Eye, ArrowRight } from 'lucide
 import { DASHBOARD_DATA_QUERY } from '../graphql/dashboard';
 import ChartWithSelector from '../components/ChartWithSelector';
 import PeriodFilter, { PeriodFilterValue } from '../components/PeriodFilter';
+import ReportExportButton from '../components/ReportExportButton';
+
+function getPeriodLabel(preset?: string, startDate?: string, endDate?: string): string {
+  const now = new Date();
+  const monthFormatter = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
+  
+  switch (preset) {
+    case 'M':
+      return monthFormatter.format(now);
+    case 'M-1': {
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      return monthFormatter.format(lastMonth);
+    }
+    case 'Q-1': {
+      const currentQuarter = Math.floor(now.getMonth() / 3);
+      const qStart = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+      const qEnd = new Date(now.getFullYear(), currentQuarter * 3, 0);
+      return `${monthFormatter.format(qStart)} - ${monthFormatter.format(qEnd)}`;
+    }
+    case 'Y-1':
+      return `Année ${now.getFullYear() - 1}`;
+    case 'custom':
+      if (startDate && endDate) {
+        return `${new Date(startDate).toLocaleDateString('fr-FR')} - ${new Date(endDate).toLocaleDateString('fr-FR')}`;
+      }
+      return 'Période personnalisée';
+    default:
+      return monthFormatter.format(now);
+  }
+}
 
 interface DashboardStats {
   totalClients: number;
@@ -105,7 +135,15 @@ export default function DashboardPage() {
           <h1>Bonjour, {auth.user?.firstName} 👋</h1>
           <p>Voici votre tableau de bord</p>
         </div>
-        <PeriodFilter value={periodFilter} onChange={setPeriodFilter} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <PeriodFilter value={periodFilter} onChange={setPeriodFilter} />
+          <ReportExportButton
+            stats={stats || null}
+            revenueByMonth={dashboardData?.revenueByMonth || []}
+            periodLabel={getPeriodLabel(periodFilter.preset, periodFilter.startDate, periodFilter.endDate)}
+            userName={`${auth.user?.firstName} ${auth.user?.lastName}`}
+          />
+        </div>
       </header>
 
       {loading ? (
