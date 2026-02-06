@@ -46,6 +46,7 @@ model User {
   notes        Note[]
   visits       Visit[]
   auditLogs    AuditLog[]
+  opportunities Opportunity[] @relation("OpportunityOwner")
 
   @@map("users")
 }
@@ -132,10 +133,11 @@ model Client {
   commercialId String? @map("commercial_id")
   commercial   User?   @relation("CommercialClients", fields: [commercialId], references: [id])
 
-  notes       Note[]
-  visits      Visit[]
-  lots        LotClient[]
-  orders      Order[]
+  notes         Note[]
+  visits        Visit[]
+  lots          LotClient[]
+  orders        Order[]
+  opportunities Opportunity[]
 
   @@map("clients")
 }
@@ -261,6 +263,76 @@ enum OrderStatus {
   SHIPPED
   DELIVERED
   CANCELLED
+}
+
+// ============================================
+// PIPELINE & OPPORTUNITÉS
+// ============================================
+
+model Opportunity {
+  id              String            @id @default(uuid())
+  title           String
+  contactName     String            @map("contact_name")
+  contactEmail    String?           @map("contact_email")
+  contactPhone    String?           @map("contact_phone")
+  source          OpportunitySource
+  amount          Float
+  probability     Int               @default(10)
+  expectedCloseDate DateTime        @map("expected_close_date")
+  status          OpportunityStatus @default(NOUVEAU)
+  lostReason      String?           @map("lost_reason")
+  lostComment     String?           @map("lost_comment")
+  notes           String?
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  clientId        String            @map("client_id")
+  client          Client            @relation(fields: [clientId], references: [id])
+
+  ownerId         String            @map("owner_id")
+  owner           User              @relation("OpportunityOwner", fields: [ownerId], references: [id])
+
+  tenantId        String            @map("tenant_id")
+
+  lines           OpportunityLine[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([clientId])
+  @@map("opportunities")
+}
+
+model OpportunityLine {
+  id            String      @id @default(uuid())
+  productName   String      @map("product_name")
+  quantity      Int         @default(1)
+  unitPrice     Float       @map("unit_price")
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  opportunityId String      @map("opportunity_id")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  productId     String?     @map("product_id")
+
+  @@map("opportunity_lines")
+}
+
+enum OpportunityStatus {
+  NOUVEAU
+  QUALIFICATION
+  PROPOSITION
+  NEGOCIATION
+  GAGNE
+  PERDU
+}
+
+enum OpportunitySource {
+  SALON
+  APPEL_ENTRANT
+  RECOMMANDATION
+  SITE_WEB
+  AUTRE
 }
 
 // ============================================

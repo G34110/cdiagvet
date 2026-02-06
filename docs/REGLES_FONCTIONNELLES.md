@@ -267,42 +267,108 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 
 ---
 
-## 6. Interface Utilisateur
+## 6. Pipeline & Opportunités
 
-### R6.1 - Sidebar rétractable
+### R6.1 - Création d'opportunité
+**Description:** Un commercial peut créer une opportunité commerciale liée à un client existant pour suivre ses affaires en cours.
+
+| Champ | Obligatoire | Description |
+|-------|-------------|-------------|
+| **Client** | Oui | Sélection parmi les clients du commercial |
+| **Titre** | Oui | Nom de l'opportunité |
+| **Contact principal** | Oui | Nom du contact chez le client |
+| **Email/Téléphone** | Non | Coordonnées du contact |
+| **Source** | Oui | Salon, Appel entrant, Recommandation, Site web, Autre |
+| **Montant estimé** | Oui | Montant en euros |
+| **Date de clôture prévue** | Oui | Date limite estimée |
+| **Notes** | Non | Commentaires libres |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.1.1 | Cliquer sur "Nouvelle opportunité" dans la page Pipeline | Le formulaire de création s'affiche |
+| CT6.1.2 | Remplir tous les champs obligatoires et valider | L'opportunité est créée avec statut "Nouveau" |
+| CT6.1.3 | Ne pas sélectionner de client et valider | Message d'erreur, le champ client est obligatoire |
+| CT6.1.4 | Vérifier que seuls les clients du commercial sont listés | Le dropdown ne contient que les clients assignés au commercial |
+
+### R6.2 - Vue Pipeline Kanban
+**Description:** Les opportunités sont affichées dans un tableau Kanban avec les colonnes correspondant aux étapes du cycle de vente.
+
+| Étape | Probabilité par défaut |
+|-------|------------------------|
+| Nouveau | 10% |
+| Qualification | 25% |
+| Proposition | 50% |
+| Négociation | 75% |
+| Gagné | 100% |
+| Perdu | 0% |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.2.1 | Accéder à la page Pipeline | Les opportunités sont affichées en colonnes par statut |
+| CT6.2.2 | Vérifier le total par colonne | Le montant total des opportunités de chaque colonne est affiché |
+| CT6.2.3 | Cliquer sur une carte opportunité | Navigation vers le détail de l'opportunité |
+| CT6.2.4 | En tant que Commercial, vérifier les opportunités affichées | Seules MES opportunités sont visibles |
+| CT6.2.5 | En tant que Responsable Filière, vérifier les opportunités | Toutes les opportunités de MA FILIÈRE sont visibles |
+
+### R6.3 - Consultation et modification d'opportunité
+**Description:** Un commercial peut consulter le détail d'une opportunité et modifier ses informations.
+
+| Champ modifiable | Description |
+|------------------|-------------|
+| **Titre** | Nom de l'opportunité |
+| **Contact** | Nom, email, téléphone du contact |
+| **Montant** | Montant estimé en euros |
+| **Probabilité** | Pourcentage de probabilité (0-100%) |
+| **Date de clôture** | Date limite estimée |
+| **Notes** | Commentaires libres |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.3.1 | Cliquer sur une carte opportunité dans le Kanban | La page de détail de l'opportunité s'affiche |
+| CT6.3.2 | Cliquer sur "Modifier" | Les champs passent en mode édition |
+| CT6.3.3 | Modifier le montant et cliquer sur "Enregistrer" | Le montant est mis à jour, la page revient en mode lecture |
+| CT6.3.4 | Modifier plusieurs champs et cliquer sur "Annuler" | Les modifications sont annulées |
+| CT6.3.5 | En tant que non-propriétaire, tenter de modifier | L'édition est refusée (lecture seule) |
+| CT6.3.6 | Vérifier l'affichage du montant pondéré | Montant × Probabilité est affiché correctement |
+
+---
+
+## 7. Interface Utilisateur
+
+### R7.1 - Sidebar rétractable
 **Description:** Le panneau latéral gauche peut être réduit pour gagner de l'espace.
 
 | Cas de test | Actions | Résultat attendu |
 |-------------|---------|------------------|
-| CT6.1.1 | Cliquer sur le bouton de réduction de la sidebar | La sidebar se réduit, seules les icônes sont visibles |
-| CT6.1.2 | Cliquer à nouveau sur le bouton | La sidebar se déploie avec les libellés |
-| CT6.1.3 | En mode réduit, le logo doit être masqué | Le logo n'est pas visible |
+| CT7.1.1 | Cliquer sur le bouton de réduction de la sidebar | La sidebar se réduit, seules les icônes sont visibles |
+| CT7.1.2 | Cliquer à nouveau sur le bouton | La sidebar se déploie avec les libellés |
+| CT7.1.3 | En mode réduit, le logo doit être masqué | Le logo n'est pas visible |
 
-### R6.2 - Bouton Annuler dans les formulaires
+### R7.2 - Bouton Annuler dans les formulaires
 **Description:** Chaque formulaire dispose d'un bouton "Annuler" pour revenir en arrière.
 
 | Cas de test | Actions | Résultat attendu |
 |-------------|---------|------------------|
-| CT6.2.1 | Dans le formulaire de création client, cliquer sur "Annuler" | Retour à la liste des clients |
-| CT6.2.2 | Dans le formulaire de RDV (modal), cliquer sur "Annuler" | La modal se ferme |
+| CT7.2.1 | Dans le formulaire de création client, cliquer sur "Annuler" | Retour à la liste des clients |
+| CT7.2.2 | Dans le formulaire de RDV (modal), cliquer sur "Annuler" | La modal se ferme |
 
-### R6.3 - Export CSV
+### R7.3 - Export CSV
 **Description:** La liste des clients peut être exportée au format CSV.
 
 | Cas de test | Prérequis | Actions | Résultat attendu |
 |-------------|-----------|---------|------------------|
-| CT6.3.1 | Liste de 10 clients affichée | Cliquer sur "Exporter CSV" | Un fichier CSV est téléchargé avec les 10 clients |
-| CT6.3.2 | RESPONSABLE_FILIERE avec accès à 5 clients | Cliquer sur "Exporter CSV" | Le CSV contient uniquement les 5 clients accessibles |
-| CT6.3.3 | Filtres actifs (ex: filière BOVINE) | Cliquer sur "Exporter CSV" | Le CSV contient uniquement les clients filtrés |
+| CT7.3.1 | Liste de 10 clients affichée | Cliquer sur "Exporter CSV" | Un fichier CSV est téléchargé avec les 10 clients |
+| CT7.3.2 | RESPONSABLE_FILIERE avec accès à 5 clients | Cliquer sur "Exporter CSV" | Le CSV contient uniquement les 5 clients accessibles |
+| CT7.3.3 | Filtres actifs (ex: filière BOVINE) | Cliquer sur "Exporter CSV" | Le CSV contient uniquement les clients filtrés |
 
-### R6.4 - Suppression massive (ADMIN uniquement)
+### R7.4 - Suppression massive (ADMIN uniquement)
 **Description:** Seul l'administrateur peut supprimer tous les clients.
 
 | Cas de test | Prérequis | Actions | Résultat attendu |
 |-------------|-----------|---------|------------------|
-| CT6.4.1 | Connecté en tant qu'ADMIN | Le bouton "Supprimer tous les clients" est visible | Bouton présent |
-| CT6.4.2 | Connecté en tant que COMMERCIAL | Vérifier la présence du bouton | Bouton non visible |
-| CT6.4.3 | Connecté en tant que RESPONSABLE_FILIERE | Vérifier la présence du bouton | Bouton non visible |
+| CT7.4.1 | Connecté en tant qu'ADMIN | Le bouton "Supprimer tous les clients" est visible | Bouton présent |
+| CT7.4.2 | Connecté en tant que COMMERCIAL | Vérifier la présence du bouton | Bouton non visible |
+| CT7.4.3 | Connecté en tant que RESPONSABLE_FILIERE | Vérifier la présence du bouton | Bouton non visible |
 
 ---
 

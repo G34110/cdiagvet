@@ -16,6 +16,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { FilieresModule } from './modules/filieres/filieres.module';
 import { LotsModule } from './modules/lots/lots.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { OpportunitiesModule } from './modules/opportunities/opportunities.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     FilieresModule,
     LotsModule,
     DashboardModule,
+    OpportunitiesModule,
   ],
 })
 export class AppModule {}

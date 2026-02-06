@@ -92,6 +92,19 @@ input CreateNoteInput {
   content: String!
 }
 
+input CreateOpportunityInput {
+  amount: Float!
+  clientId: String!
+  contactEmail: String
+  contactName: String!
+  contactPhone: String
+  expectedCloseDate: String!
+  notes: String
+  probability: Int
+  source: String!
+  title: String!
+}
+
 input CreatePhotoInput {
   caption: String
   url: String!
@@ -181,6 +194,7 @@ type Mutation {
   associateLotToClient(input: AssociateLotClientInput!): LotClient!
   createClient(input: CreateClientInput!): Client!
   createNote(input: CreateNoteInput!): Note!
+  createOpportunity(input: CreateOpportunityInput!): Opportunity!
   createPhoto(input: CreatePhotoInput!): Photo!
   createVisit(input: CreateVisitInput!): Visit!
   deleteAllClients: Int!
@@ -192,6 +206,8 @@ type Mutation {
   scanBarcode(input: ScanBarcodeInput!): ScanResult!
   updateClient(id: String!, input: UpdateClientInput!): Client!
   updateNote(id: String!, input: UpdateNoteInput!): Note!
+  updateOpportunity(input: UpdateOpportunityInput!): Opportunity!
+  updateOpportunityStatus(id: String!, lostComment: String, lostReason: String, status: String!): Opportunity!
   updateVisit(id: String!, input: UpdateVisitInput!): Visit!
 }
 
@@ -209,6 +225,67 @@ type NoteAuthor {
   firstName: String!
   id: ID!
   lastName: String!
+}
+
+type Opportunity {
+  amount: Float!
+  client: OpportunityClient!
+  contactEmail: String
+  contactName: String!
+  contactPhone: String
+  createdAt: DateTime!
+  expectedCloseDate: DateTime!
+  id: ID!
+  lines: [OpportunityLine!]!
+  lostComment: String
+  lostReason: String
+  notes: String
+  owner: OpportunityOwner!
+  probability: Int!
+  source: OpportunitySource!
+  status: OpportunityStatus!
+  title: String!
+  updatedAt: DateTime!
+  weightedAmount: Float!
+}
+
+type OpportunityClient {
+  id: ID!
+  name: String!
+  organization: String
+}
+
+type OpportunityLine {
+  id: ID!
+  productId: String
+  productName: String!
+  quantity: Int!
+  total: Float!
+  unitPrice: Float!
+}
+
+type OpportunityOwner {
+  email: String!
+  firstName: String!
+  id: ID!
+  lastName: String!
+}
+
+enum OpportunitySource {
+  APPEL_ENTRANT
+  AUTRE
+  RECOMMANDATION
+  SALON
+  SITE_WEB
+}
+
+enum OpportunityStatus {
+  GAGNE
+  NEGOCIATION
+  NOUVEAU
+  PERDU
+  PROPOSITION
+  QUALIFICATION
 }
 
 type Photo {
@@ -245,6 +322,9 @@ type Query {
   myClients(filter: ClientsFilterInput): [Client!]!
   myVisits(filter: VisitsFilterInput): [Visit!]!
   note(id: String!): Note!
+  opportunities: [Opportunity!]!
+  opportunitiesByStatus(status: String!): [Opportunity!]!
+  opportunity(id: String!): Opportunity!
   searchLots(query: String!): [Lot!]!
   todayVisits: [Visit!]!
   upcomingVisits(days: Int = 7): [Visit!]!
@@ -292,6 +372,24 @@ input UpdateClientInput {
 
 input UpdateNoteInput {
   content: String
+}
+
+input UpdateOpportunityInput {
+  amount: Float
+  clientId: String
+  contactEmail: String
+  contactName: String
+  contactPhone: String
+  expectedCloseDate: String
+  id: String!
+  lostComment: String
+  lostReason: String
+  notes: String
+  ownerId: String
+  probability: Int
+  source: String
+  status: String
+  title: String
 }
 
 input UpdateVisitInput {

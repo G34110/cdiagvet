@@ -13,6 +13,8 @@ import ImportClientsPage from './pages/ImportClientsPage';
 import ScannerPage from './pages/ScannerPage';
 import AssociateLotPage from './pages/AssociateLotPage';
 import LotTraceabilityPage from './pages/LotTraceabilityPage';
+import PipelinePage from './pages/PipelinePage';
+import OpportunityDetailPage from './pages/OpportunityDetailPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const auth = useRecoilValue(authState);
@@ -42,6 +44,8 @@ function App() {
         <Route path="scanner" element={<ScannerPage />} />
         <Route path="scanner/associate/:lotId" element={<AssociateLotPage />} />
         <Route path="traceability" element={<LotTraceabilityPage />} />
+        <Route path="pipeline" element={<PipelinePage />} />
+        <Route path="pipeline/:id" element={<OpportunityDetailPage />} />
       </Route>
     </Routes>
   );
