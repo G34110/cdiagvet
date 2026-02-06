@@ -16,8 +16,8 @@ export class CreateVisitInput {
   @IsOptional()
   notes?: string;
 
-  @Field()
-  @IsNotEmpty()
+  @Field({ nullable: true })
+  @IsOptional()
   @IsUUID()
-  clientId: string;
+  clientId?: string;
 }

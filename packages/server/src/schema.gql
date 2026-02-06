@@ -99,7 +99,7 @@ input CreatePhotoInput {
 }
 
 input CreateVisitInput {
-  clientId: String!
+  clientId: String
   date: String!
   notes: String
   subject: String
@@ -311,7 +311,7 @@ type UserPayload {
 
 type Visit {
   client: Client
-  clientId: String!
+  clientId: String
   createdAt: DateTime!
   date: DateTime!
   id: ID!

@@ -129,32 +129,46 @@ export class DashboardService {
       isActive: true,
     };
 
-    // Find clients with no scheduled visit in the next 60 days (J to J+60)
+    // Find clients with:
+    // - No visit in the last 30 days (J-30 to J)
+    // - AND no scheduled visit in the next 60 days (J to J+60)
     const now = new Date();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const sixtyDaysFromNow = new Date();
     sixtyDaysFromNow.setDate(sixtyDaysFromNow.getDate() + 60);
 
-    const clientsWithoutScheduledVisit = await this.prisma.client.findMany({
+    const clientsWithoutVisit = await this.prisma.client.findMany({
       where: {
         ...clientFilter,
-        visits: {
-          none: {
-            AND: [
-              { date: { gte: now } },
-              { date: { lte: sixtyDaysFromNow } },
-            ],
+        AND: [
+          // No visit in the last 30 days
+          {
+            visits: {
+              none: {
+                date: { gte: thirtyDaysAgo, lte: now },
+              },
+            },
           },
-        },
+          // No scheduled visit in the next 60 days
+          {
+            visits: {
+              none: {
+                date: { gt: now, lte: sixtyDaysFromNow },
+              },
+            },
+          },
+        ],
       },
       take: 10,
     });
 
-    for (const client of clientsWithoutScheduledVisit) {
+    for (const client of clientsWithoutVisit) {
       alerts.push({
         clientId: client.id,
         clientName: client.name,
         alertType: 'NO_SCHEDULED_VISIT',
-        message: 'Pas de visite prévue dans les 60 prochains jours',
+        message: 'Aucune visite depuis 30 jours et pas de visite prévue dans les 60 prochains jours',
         createdAt: new Date(),
       });
     }

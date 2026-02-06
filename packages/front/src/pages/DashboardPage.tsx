@@ -4,15 +4,7 @@ import { Link } from 'react-router-dom';
 import { authState } from '../state/auth';
 import { Users, TrendingUp, AlertCircle, Package, Eye, ArrowRight } from 'lucide-react';
 import { DASHBOARD_DATA_QUERY } from '../graphql/dashboard';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+import ChartWithSelector from '../components/ChartWithSelector';
 
 interface DashboardStats {
   totalClients: number;
@@ -111,32 +103,18 @@ export default function DashboardPage() {
           </div>
 
           <div className="dashboard-grid">
-            <section className="dashboard-section">
-              <h2>
-                <TrendingUp size={20} />
-                Évolution du CA (6 derniers mois)
-              </h2>
-              {dashboardData?.revenueByMonth && dashboardData.revenueByMonth.length > 0 ? (
-                <div style={{ width: '100%', height: 250 }}>
-                  <ResponsiveContainer>
-                    <BarChart data={dashboardData.revenueByMonth}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip 
-                        formatter={(value: number) => [`${value.toLocaleString('fr-FR')} €`, 'CA']}
-                      />
-                      <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <TrendingUp size={48} />
-                  <p>Aucune donnée de CA disponible</p>
-                </div>
-              )}
-            </section>
+            <ChartWithSelector
+              chartId="revenue-evolution"
+              title="Évolution du CA (6 derniers mois)"
+              icon={<TrendingUp size={20} />}
+              data={(dashboardData?.revenueByMonth || []).map(item => ({
+                name: item.month,
+                value: item.revenue,
+              }))}
+              color="#3b82f6"
+              tooltipFormatter={(value) => `${value.toLocaleString('fr-FR')} €`}
+              tooltipLabel="CA"
+            />
 
             <section className="dashboard-section">
               <h2>

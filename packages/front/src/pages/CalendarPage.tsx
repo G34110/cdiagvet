@@ -13,8 +13,8 @@ interface Visit {
   date: string;
   subject?: string;
   notes?: string;
-  clientId: string;
-  client: {
+  clientId?: string;
+  client?: {
     id: string;
     name: string;
     city?: string;
@@ -34,7 +34,9 @@ export default function CalendarPage() {
 
   const events = visits.map((visit) => ({
     id: visit.id,
-    title: `${visit.client.name}${visit.subject ? ` - ${visit.subject}` : ''}`,
+    title: visit.client?.name 
+      ? `${visit.client.name}${visit.subject ? ` - ${visit.subject}` : ''}`
+      : visit.subject || 'RDV',
     start: visit.date,
     extendedProps: { visit },
   }));

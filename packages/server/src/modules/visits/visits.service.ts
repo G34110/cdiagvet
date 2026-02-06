@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateVisitInput } from './dto/create-visit.input';
 import { UpdateVisitInput } from './dto/update-visit.input';
@@ -9,14 +9,26 @@ export class VisitsService {
   constructor(private prisma: PrismaService) {}
 
   async create(input: CreateVisitInput, userId: string) {
+    // Validate date is not in the past
+    const visitDate = new Date(input.date);
+    if (visitDate < new Date()) {
+      throw new BadRequestException('La date et l\'heure ne peuvent pas être antérieures à maintenant.');
+    }
+
+    const data: any = {
+      date: new Date(input.date),
+      subject: input.subject,
+      notes: input.notes,
+      userId,
+    };
+
+    // Only set clientId if provided (visite client)
+    if (input.clientId) {
+      data.clientId = input.clientId;
+    }
+
     return this.prisma.visit.create({
-      data: {
-        date: new Date(input.date),
-        subject: input.subject,
-        notes: input.notes,
-        clientId: input.clientId,
-        userId,
-      },
+      data,
       include: { client: true, user: true },
     });
   }
@@ -76,9 +88,12 @@ export class VisitsService {
 
     // Role-based filtering
     if (ctx.role === 'COMMERCIAL') {
+      // COMMERCIAL sees all their own visits (with or without client)
       where.userId = ctx.userId;
     } else if (ctx.role === 'RESPONSABLE_FILIERE') {
+      // RESPONSABLE sees ONLY client visits from their filières (not personal RDV)
       if (ctx.filiereIds?.length) {
+        where.clientId = { not: null }; // Only visits with a client
         where.client = {
           tenantId: ctx.tenantId,
           deletedAt: null,
@@ -88,6 +103,8 @@ export class VisitsService {
         return []; // No filières assigned
       }
     } else if (ctx.role === 'ADMIN') {
+      // ADMIN sees only client visits (not personal RDV)
+      where.clientId = { not: null };
       where.client = { tenantId: ctx.tenantId, deletedAt: null };
     }
 

@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { useSetRecoilState } from 'recoil';
+import { useSetRecoilState, useRecoilValue } from 'recoil';
 import { authState } from '../state/auth';
 import {
   LayoutDashboard,
@@ -25,7 +25,9 @@ const navItems = [
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const setAuth = useSetRecoilState(authState);
+  const auth = useRecoilValue(authState);
   const navigate = useNavigate();
+  const isProduction = import.meta.env.PROD;
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -59,6 +61,18 @@ export default function Layout() {
           <LogOut size={20} />
           {sidebarOpen && <span>Déconnexion</span>}
         </button>
+        {!isProduction && auth.user?.email && (
+          <div className="debug-user-info" style={{
+            padding: sidebarOpen ? '0.5rem 1rem' : '0.5rem',
+            fontSize: '0.75rem',
+            color: 'var(--text-muted)',
+            borderTop: '1px solid var(--border)',
+            textAlign: 'center',
+            wordBreak: 'break-all',
+          }}>
+            {sidebarOpen ? auth.user.email : auth.user.email.charAt(0).toUpperCase()}
+          </div>
+        )}
       </aside>
       <main className="main-content">
         <Outlet />

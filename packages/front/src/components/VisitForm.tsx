@@ -11,7 +11,7 @@ interface VisitFormProps {
     date: string;
     subject?: string;
     notes?: string;
-    clientId: string;
+    clientId?: string;
   };
   clientId?: string;
   onCancel?: () => void;
@@ -67,11 +67,24 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate date is not in the past (only for new visits)
+    if (!isEditing) {
+      const selectedDate = new Date(form.date);
+      const now = new Date();
+      if (selectedDate < now) {
+        alert('La date et l\'heure ne peuvent pas être antérieures à maintenant.');
+        return;
+      }
+    }
+
     const input: Record<string, unknown> = {
       date: new Date(form.date).toISOString(),
-      clientId: form.clientId,
     };
 
+    // Only include clientId if a client is selected (visite client)
+    if (form.clientId) {
+      input.clientId = form.clientId;
+    }
     if (form.subject) input.subject = form.subject;
     if (form.notes) input.notes = form.notes;
 
@@ -105,13 +118,12 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
   return (
     <form className="client-form" onSubmit={handleSubmit}>
       <div className="form-group">
-        <label htmlFor="clientId">Client *</label>
+        <label htmlFor="clientId">Client (Optionnel)</label>
         <select
           id="clientId"
           name="clientId"
           value={form.clientId}
           onChange={handleChange}
-          required
           disabled={!!clientId}
           style={{ 
             width: '100%', 
@@ -121,18 +133,13 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
             fontSize: '1rem'
           }}
         >
-          <option value="">{clientsLoading ? 'Chargement...' : 'Sélectionner un client'}</option>
+          <option value="">{clientsLoading ? 'Chargement...' : '-- Aucun client --'}</option>
           {clients.map((client) => (
             <option key={client.id} value={client.id}>
               {client.name} {client.city ? `- ${client.city}` : ''}
             </option>
           ))}
         </select>
-        {!clientsLoading && clients.length === 0 && (
-          <p style={{ color: 'var(--danger)', fontSize: '0.9rem', marginTop: '0.5rem' }}>
-            Aucun client disponible. Créez d'abord un client.
-          </p>
-        )}
       </div>
 
       <div className="form-group">
@@ -148,14 +155,15 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
       </div>
 
       <div className="form-group">
-        <label htmlFor="subject">Objet</label>
+        <label htmlFor="subject">Objet {!form.clientId && '*'}</label>
         <input
           type="text"
           id="subject"
           name="subject"
           value={form.subject}
           onChange={handleChange}
-          placeholder="Objet de la visite"
+          required={!form.clientId}
+          placeholder={form.clientId ? 'Objet de la visite' : 'Objet du RDV (obligatoire)'}
         />
       </div>
 
@@ -166,7 +174,7 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
           name="notes"
           value={form.notes}
           onChange={(e) => handleChange(e)}
-          placeholder="Notes de la visite"
+          placeholder={form.clientId ? 'Notes de la visite' : 'Notes du RDV'}
           rows={4}
           style={{ 
             width: '100%', 
@@ -188,7 +196,7 @@ export default function VisitForm({ visit, clientId, onCancel, onSuccess }: Visi
         >
           <X size={16} /> Annuler
         </button>
-        <button type="submit" className="btn-primary" disabled={loading || !form.clientId || !form.date}>
+        <button type="submit" className="btn-primary" disabled={loading || !form.date || (!form.clientId && !form.subject)}>
           <Save size={16} /> {loading ? 'Enregistrement...' : 'Enregistrer'}
         </button>
       </div>

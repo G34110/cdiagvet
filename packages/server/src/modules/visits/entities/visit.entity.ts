@@ -33,8 +33,8 @@ export class Visit {
   @Field()
   updatedAt: Date;
 
-  @Field()
-  clientId: string;
+  @Field({ nullable: true })
+  clientId?: string;
 
   @Field(() => Client, { nullable: true })
   client?: Client;
