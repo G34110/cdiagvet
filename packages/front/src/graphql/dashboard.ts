@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const DASHBOARD_DATA_QUERY = gql`
-  query DashboardData {
-    dashboardData {
+  query DashboardData($filter: DashboardFilterInput) {
+    dashboardData(filter: $filter) {
       stats {
         totalClients
         activeClients

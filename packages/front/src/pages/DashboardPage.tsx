@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useQuery } from '@apollo/client';
 import { Link } from 'react-router-dom';
@@ -5,6 +6,7 @@ import { authState } from '../state/auth';
 import { Users, TrendingUp, AlertCircle, Package, Eye, ArrowRight } from 'lucide-react';
 import { DASHBOARD_DATA_QUERY } from '../graphql/dashboard';
 import ChartWithSelector from '../components/ChartWithSelector';
+import PeriodFilter, { PeriodFilterValue } from '../components/PeriodFilter';
 
 interface DashboardStats {
   totalClients: number;
@@ -37,8 +39,30 @@ interface DashboardData {
 
 export default function DashboardPage() {
   const auth = useRecoilValue(authState);
+  const [periodFilter, setPeriodFilter] = useState<PeriodFilterValue>({ preset: 'M' });
 
-  const { data, loading } = useQuery<{ dashboardData: DashboardData }>(DASHBOARD_DATA_QUERY);
+  const buildFilterVariables = () => {
+    if (periodFilter.preset === 'custom' && periodFilter.startDate && periodFilter.endDate) {
+      return {
+        filter: {
+          startDate: new Date(periodFilter.startDate).toISOString(),
+          endDate: new Date(periodFilter.endDate).toISOString(),
+        },
+      };
+    }
+    if (periodFilter.preset && periodFilter.preset !== 'custom') {
+      return { filter: { preset: periodFilter.preset } };
+    }
+    return {};
+  };
+
+  const { data, loading, error } = useQuery<{ dashboardData: DashboardData }>(DASHBOARD_DATA_QUERY, {
+    variables: buildFilterVariables(),
+  });
+
+  if (error) {
+    console.error('Dashboard query error:', error);
+  }
 
   const dashboardData = data?.dashboardData;
   const stats = dashboardData?.stats;
@@ -52,14 +76,14 @@ export default function DashboardPage() {
       color: '#3b82f6' 
     },
     { 
-      label: 'Visites ce mois', 
+      label: 'Visites (période)', 
       value: stats?.visitsThisMonth ?? '—', 
       total: stats?.totalVisits,
       icon: Eye, 
       color: '#10b981' 
     },
     { 
-      label: 'CA du mois', 
+      label: 'CA (période)', 
       value: stats ? `${stats.revenueThisMonth.toLocaleString('fr-FR')} €` : '—', 
       icon: TrendingUp, 
       color: '#8b5cf6' 
@@ -76,13 +100,20 @@ export default function DashboardPage() {
 
   return (
     <div className="dashboard-page">
-      <header className="page-header">
-        <h1>Bonjour, {auth.user?.firstName} 👋</h1>
-        <p>Voici votre tableau de bord</p>
+      <header className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+        <div>
+          <h1>Bonjour, {auth.user?.firstName} 👋</h1>
+          <p>Voici votre tableau de bord</p>
+        </div>
+        <PeriodFilter value={periodFilter} onChange={setPeriodFilter} />
       </header>
 
       {loading ? (
         <div className="loading">Chargement des données...</div>
+      ) : error ? (
+        <div className="error" style={{ color: 'red', padding: '1rem', background: '#fee2e2', borderRadius: '8px' }}>
+          Erreur: {error.message}
+        </div>
       ) : (
         <>
           <div className="stats-grid">
@@ -105,7 +136,7 @@ export default function DashboardPage() {
           <div className="dashboard-grid">
             <ChartWithSelector
               chartId="revenue-evolution"
-              title="Évolution du CA (6 derniers mois)"
+              title="Évolution du CA"
               icon={<TrendingUp size={20} />}
               data={(dashboardData?.revenueByMonth || []).map(item => ({
                 name: item.month,

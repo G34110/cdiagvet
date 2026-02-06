@@ -111,6 +111,17 @@ type DashboardData {
   stats: DashboardStats!
 }
 
+input DashboardFilterInput {
+  """End date for the period filter"""
+  endDate: String
+
+  """Preset period: M-1, Q-1, Y-1, or custom"""
+  preset: String
+
+  """Start date for the period filter"""
+  startDate: String
+}
+
 type DashboardStats {
   activeClients: Int!
   revenueThisMonth: Float!
@@ -226,7 +237,7 @@ type Query {
   clientVisits(clientId: String!): [Visit!]!
   clients(filter: ClientsFilterInput): ClientsResponse!
   clientsForMap: [ClientMapItem!]!
-  dashboardData: DashboardData!
+  dashboardData(filter: DashboardFilterInput): DashboardData!
   filieres: [Filiere!]!
   lot(id: ID!): Lot
   lotTraceability(lotId: ID!): LotTraceability!

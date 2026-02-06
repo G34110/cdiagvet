@@ -228,6 +228,26 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT5.4.4 | Changer le type de graphique puis rafraîchir la page | Le type de graphique choisi est conservé |
 | CT5.4.5 | Se déconnecter, se reconnecter sur le même navigateur | Le type de graphique choisi est conservé |
 
+### R5.5 - Filtrage du tableau de bord par période
+**Description:** L'utilisateur peut filtrer les données du tableau de bord par période prédéfinie ou personnalisée. Les KPIs et graphiques sont recalculés selon la période sélectionnée.
+
+| Périodes disponibles | Description |
+|---------------------|-------------|
+| **Ce mois** | Mois en cours (par défaut) |
+| **Mois précédent** (M-1) | Le mois calendaire précédent |
+| **Trimestre précédent** (Q-1) | Les 3 mois du trimestre précédent |
+| **Année précédente** (Y-1) | L'année calendaire précédente |
+| **Personnalisé** | Dates de début et fin au choix |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT5.5.1 | Ouvrir le tableau de bord | La période "Ce mois" est sélectionnée par défaut |
+| CT5.5.2 | Cliquer sur le sélecteur de période et choisir "Mois précédent" | Les KPIs "Visites (période)" et "CA (période)" affichent les valeurs du mois précédent |
+| CT5.5.3 | Sélectionner "Trimestre précédent" | Le graphique "Évolution du CA" affiche 3 mois de données |
+| CT5.5.4 | Sélectionner "Année précédente" | Le graphique affiche les 12 mois de l'année précédente |
+| CT5.5.5 | Sélectionner "Personnalisé" puis choisir une date de début et de fin | Les champs de date apparaissent et les données sont filtrées sur la période choisie |
+| CT5.5.6 | Changer de période plusieurs fois | Les données se mettent à jour à chaque changement |
+
 ---
 
 ## 6. Interface Utilisateur

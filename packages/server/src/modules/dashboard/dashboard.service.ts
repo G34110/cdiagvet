@@ -2,11 +2,18 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { DashboardData, DashboardStats, ClientAlert, RevenueByMonth } from './entities/dashboard.entity';
 
+interface PeriodFilter {
+  startDate?: string;
+  endDate?: string;
+  preset?: string;
+}
+
 interface DashboardContext {
   tenantId: string;
   userId: string;
   role: string;
   filiereIds?: string[];
+  filter?: PeriodFilter;
 }
 
 @Injectable()
@@ -46,9 +53,41 @@ export class DashboardService {
     return filter;
   }
 
-  private async getStats(ctx: DashboardContext): Promise<DashboardStats> {
+  private resolvePeriod(filter?: PeriodFilter): { startDate: Date; endDate: Date } {
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    let startDate: Date;
+    let endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+    if (filter?.startDate && filter?.endDate) {
+      return { startDate: new Date(filter.startDate), endDate: new Date(filter.endDate) };
+    }
+
+    switch (filter?.preset) {
+      case 'M-1': // Last month
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        break;
+      case 'Q-1': // Last quarter
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), (currentQuarter - 1) * 3, 1);
+        endDate = new Date(now.getFullYear(), currentQuarter * 3, 0, 23, 59, 59);
+        break;
+      case 'Y-1': // Last year
+        startDate = new Date(now.getFullYear() - 1, 0, 1);
+        endDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+        break;
+      case 'M': // Current month (default)
+      default:
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        break;
+    }
+
+    return { startDate, endDate };
+  }
+
+  private async getStats(ctx: DashboardContext): Promise<DashboardStats> {
+    const { startDate, endDate } = this.resolvePeriod(ctx.filter);
 
     const clientFilter = this.buildClientFilter(ctx);
 
@@ -65,8 +104,9 @@ export class DashboardService {
       },
     });
 
-    // Total visits
+    // Total visits (only visits with clients matching the filter)
     const visitsFilter: any = {
+      clientId: { not: null },
       client: clientFilter,
     };
 
@@ -74,12 +114,11 @@ export class DashboardService {
       where: visitsFilter,
     });
 
-    // Visits this month (all visits in current month, not future months)
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    // Visits in selected period
     const visitsThisMonth = await this.prisma.visit.count({
       where: {
         ...visitsFilter,
-        date: { gte: startOfMonth, lte: endOfMonth },
+        date: { gte: startDate, lte: endDate },
       },
     });
 
@@ -105,7 +144,7 @@ export class DashboardService {
       where: {
         client: clientFilter,
         status: { not: 'CANCELLED' },
-        createdAt: { gte: startOfMonth },
+        createdAt: { gte: startDate, lte: endDate },
       },
       _sum: { total: true },
     });
@@ -209,13 +248,17 @@ export class DashboardService {
 
   private async getRevenueByMonth(ctx: DashboardContext): Promise<RevenueByMonth[]> {
     const months: RevenueByMonth[] = [];
-    const now = new Date();
     const clientFilter = this.buildClientFilter(ctx);
+    const { startDate, endDate } = this.resolvePeriod(ctx.filter);
 
-    // Get last 6 months
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const endDate = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+    // Calculate number of months in the period
+    const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1;
+    const numMonths = Math.min(Math.max(monthsDiff, 1), 12); // Between 1 and 12 months
+
+    // Get months in the selected period
+    for (let i = numMonths - 1; i >= 0; i--) {
+      const date = new Date(endDate.getFullYear(), endDate.getMonth() - i, 1);
+      const monthEndDate = new Date(endDate.getFullYear(), endDate.getMonth() - i + 1, 0);
 
       const result = await this.prisma.order.aggregate({
         where: {
@@ -223,7 +266,7 @@ export class DashboardService {
           status: { not: 'CANCELLED' },
           createdAt: {
             gte: date,
-            lte: endDate,
+            lte: monthEndDate,
           },
         },
         _sum: { total: true },
