@@ -17,6 +17,7 @@ import { FilieresModule } from './modules/filieres/filieres.module';
 import { LotsModule } from './modules/lots/lots.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module';
+import { ProductsModule } from './modules/products/products.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { OpportunitiesModule } from './modules/opportunities/opportunities.modul
     LotsModule,
     DashboardModule,
     OpportunitiesModule,
+    ProductsModule,
   ],
 })
 export class AppModule {}

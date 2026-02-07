@@ -39,6 +39,9 @@ export class OpportunityLine {
 
   @Field({ nullable: true })
   productId?: string;
+
+  @Field({ nullable: true })
+  kitId?: string;
 }
 
 @ObjectType()

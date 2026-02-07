@@ -368,6 +368,51 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT6.5.3 | Annuler la suppression | L'opportunité n'est pas supprimée |
 | CT6.5.4 | En tant que Commercial, accéder au détail d'une opportunité | Le bouton "Supprimer" n'est pas visible |
 
+### R6.6 - Catalogue Produits
+**Description:** Un catalogue centralisé de produits et kits diagnostiques est disponible pour les opportunités.
+
+| Règle | Description |
+|-------|-------------|
+| **Produits** | Chaque produit a un code unique, nom, description, prix unitaire et filière optionnelle |
+| **Kits** | Un kit regroupe plusieurs produits avec leurs quantités, à un prix forfaitaire |
+| **Gestion** | Seul l'Admin peut créer, modifier ou supprimer des produits/kits |
+| **Statut** | Les produits/kits peuvent être actifs ou inactifs |
+| **Multi-tenant** | Le catalogue est isolé par tenant |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.6.1 | En tant qu'Admin, accéder au menu "Catalogue" | La liste des produits et kits s'affiche |
+| CT6.6.2 | Cliquer sur "Nouveau produit" | Un formulaire de création s'affiche |
+| CT6.6.3 | Remplir et valider le formulaire produit | Le produit est créé et visible dans la liste |
+| CT6.6.4 | Modifier un produit existant | Les modifications sont enregistrées |
+| CT6.6.5 | Supprimer un produit | Le produit est supprimé après confirmation |
+| CT6.6.6 | Créer un kit avec plusieurs produits | Le kit est créé avec la liste des produits associés |
+| CT6.6.7 | Cocher "Afficher inactifs" | Les produits/kits inactifs apparaissent grisés |
+| CT6.6.8 | En tant que Commercial, accéder au Catalogue | Le catalogue est en lecture seule (pas de boutons CRUD) |
+
+### R6.7 - Lignes d'opportunité liées au catalogue
+**Description:** Le montant d'une opportunité est calculé automatiquement à partir des produits et kits sélectionnés.
+
+| Règle | Description |
+|-------|-------------|
+| **Lignes produits** | Une opportunité contient des lignes de produits ou kits avec quantités |
+| **Calcul automatique** | Le montant total de l'opportunité = somme des (quantité × prix unitaire) de chaque ligne |
+| **Sélection produit** | L'utilisateur peut ajouter un produit du catalogue avec une quantité |
+| **Sélection kit** | L'utilisateur peut ajouter un kit du catalogue (prix forfaitaire) |
+| **Modification quantité** | La quantité peut être ajustée via +/- directement dans la liste |
+| **Suppression ligne** | Une ligne peut être supprimée, le montant est recalculé |
+| **Cohérence prix** | Le prix unitaire est celui du produit/kit au moment de l'ajout |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.7.1 | Sur une opportunité, cliquer sur "Ajouter" dans la section Lignes | Une modal s'affiche avec la liste des produits et kits |
+| CT6.7.2 | Sélectionner un produit, quantité 2, valider | La ligne est ajoutée, le montant de l'opportunité est mis à jour |
+| CT6.7.3 | Sélectionner un kit, quantité 1, valider | Le kit est ajouté avec son prix forfaitaire |
+| CT6.7.4 | Cliquer sur "+" sur une ligne existante | La quantité augmente de 1, le total est recalculé |
+| CT6.7.5 | Cliquer sur "-" sur une ligne (qté > 1) | La quantité diminue de 1, le total est recalculé |
+| CT6.7.6 | Cliquer sur la corbeille d'une ligne | La ligne est supprimée après confirmation, montant recalculé |
+| CT6.7.7 | Ajouter plusieurs produits et kits | Le montant total = somme de toutes les lignes |
+
 ---
 
 ## 7. Interface Utilisateur

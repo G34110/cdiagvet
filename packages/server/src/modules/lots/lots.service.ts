@@ -32,10 +32,21 @@ export class LotsService {
     let isNewProduct = false;
     if (!product) {
       isNewProduct = true;
+      // Get a default tenant for barcode-scanned products
+      const defaultTenant = await this.prisma.tenant.findFirst();
+      if (!defaultTenant) {
+        return {
+          success: false,
+          message: 'Aucun tenant configuré',
+          isNewProduct: false,
+        };
+      }
       product = await this.prisma.product.create({
         data: {
+          code: `SCAN-${decoded.gtin}`,
           gtin: decoded.gtin,
           name: productName || `Produit ${decoded.gtin}`,
+          tenantId: defaultTenant.id,
         },
       });
       this.logger.log(`Created new product: ${product.name} (GTIN: ${decoded.gtin})`);

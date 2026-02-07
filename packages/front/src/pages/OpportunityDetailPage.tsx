@@ -1,8 +1,19 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { ArrowLeft, Edit2, Save, X, Target, User, Calendar, Euro, TrendingUp, Trash2 } from 'lucide-react';
-import { OPPORTUNITY_QUERY, UPDATE_OPPORTUNITY_MUTATION, ASSIGN_OPPORTUNITY_MUTATION, COMMERCIALS_FOR_ASSIGNMENT_QUERY, DELETE_OPPORTUNITY_MUTATION } from '../graphql/opportunities';
+import { ArrowLeft, Edit2, Save, X, Target, User, Calendar, Euro, TrendingUp, Trash2, Package, Plus, Minus } from 'lucide-react';
+import { 
+  OPPORTUNITY_QUERY, 
+  UPDATE_OPPORTUNITY_MUTATION, 
+  ASSIGN_OPPORTUNITY_MUTATION, 
+  COMMERCIALS_FOR_ASSIGNMENT_QUERY, 
+  DELETE_OPPORTUNITY_MUTATION,
+  ADD_PRODUCT_TO_OPPORTUNITY,
+  ADD_KIT_TO_OPPORTUNITY,
+  UPDATE_OPPORTUNITY_LINE,
+  REMOVE_OPPORTUNITY_LINE
+} from '../graphql/opportunities';
+import { PRODUCTS_QUERY, PRODUCT_KITS_QUERY } from '../graphql/products';
 import { useRecoilValue } from 'recoil';
 import { authState } from '../state/auth';
 import './OpportunityDetailPage.css';
@@ -35,6 +46,33 @@ interface Opportunity {
     lastName: string;
     email: string;
   };
+  lines: OpportunityLine[];
+}
+
+interface OpportunityLine {
+  id: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  productId?: string;
+  kitId?: string;
+}
+
+interface Product {
+  id: string;
+  code: string;
+  name: string;
+  unitPrice: number;
+  isActive: boolean;
+}
+
+interface ProductKit {
+  id: string;
+  code: string;
+  name: string;
+  price: number;
+  isActive: boolean;
 }
 
 interface Commercial {
@@ -84,6 +122,16 @@ export default function OpportunityDetailPage() {
   const [updateOpportunity, { loading: updating }] = useMutation(UPDATE_OPPORTUNITY_MUTATION);
   const [assignOpportunity, { loading: assigning }] = useMutation(ASSIGN_OPPORTUNITY_MUTATION);
   const [deleteOpportunity, { loading: deleting }] = useMutation(DELETE_OPPORTUNITY_MUTATION);
+  const [addProductToOpportunity] = useMutation(ADD_PRODUCT_TO_OPPORTUNITY);
+  const [addKitToOpportunity] = useMutation(ADD_KIT_TO_OPPORTUNITY);
+  const [updateOpportunityLine] = useMutation(UPDATE_OPPORTUNITY_LINE);
+  const [removeOpportunityLine] = useMutation(REMOVE_OPPORTUNITY_LINE);
+
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [selectedKitId, setSelectedKitId] = useState('');
+  const [lineQuantity, setLineQuantity] = useState(1);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const auth = useRecoilValue(authState);
   const canAssign = auth.user?.role === 'ADMIN' || auth.user?.role === 'RESPONSABLE_FILIERE';
@@ -95,16 +143,17 @@ export default function OpportunityDetailPage() {
   );
   const commercials = commercialsData?.commercialsForAssignment || [];
 
+  const { data: productsData } = useQuery<{ products: Product[] }>(PRODUCTS_QUERY);
+  const { data: kitsData } = useQuery<{ productKits: ProductKit[] }>(PRODUCT_KITS_QUERY);
+  const products = productsData?.products?.filter(p => p.isActive) || [];
+  const kits = kitsData?.productKits?.filter(k => k.isActive) || [];
+
   const opportunity = data?.opportunity;
 
   const startEditing = () => {
     if (opportunity) {
       setFormData({
         title: opportunity.title,
-        contactName: opportunity.contactName,
-        contactEmail: opportunity.contactEmail || '',
-        contactPhone: opportunity.contactPhone || '',
-        amount: opportunity.amount,
         probability: opportunity.probability,
         expectedCloseDate: opportunity.expectedCloseDate.split('T')[0],
         notes: opportunity.notes || '',
@@ -114,8 +163,14 @@ export default function OpportunityDetailPage() {
   };
 
   const cancelEditing = () => {
+    if (hasUnsavedChanges) {
+      if (!confirm('Des modifications non enregistrées seront perdues. Voulez-vous vraiment annuler ?')) {
+        return;
+      }
+    }
     setIsEditing(false);
     setFormData({});
+    setHasUnsavedChanges(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -124,6 +179,7 @@ export default function OpportunityDetailPage() {
       ...prev,
       [name]: type === 'number' ? parseFloat(value) || 0 : value,
     }));
+    setHasUnsavedChanges(true);
   };
 
   const handleSave = async () => {
@@ -132,16 +188,13 @@ export default function OpportunityDetailPage() {
     try {
       const input: any = { id };
       if (formData.title) input.title = formData.title;
-      if (formData.contactName) input.contactName = formData.contactName;
-      if (formData.contactEmail) input.contactEmail = formData.contactEmail;
-      if (formData.contactPhone) input.contactPhone = formData.contactPhone;
-      if (formData.amount !== undefined) input.amount = formData.amount;
       if (formData.probability !== undefined) input.probability = formData.probability;
       if (formData.expectedCloseDate) input.expectedCloseDate = formData.expectedCloseDate;
       if (formData.notes !== undefined) input.notes = formData.notes;
 
       await updateOpportunity({ variables: { input } });
       setIsEditing(false);
+      setHasUnsavedChanges(false);
       refetch();
     } catch (error: any) {
       console.error('Erreur modification:', error);
@@ -154,6 +207,57 @@ export default function OpportunityDetailPage() {
 
   const formatDate = (dateStr: string) =>
     new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+  const handleAddProduct = async () => {
+    if (!id || !selectedProductId) return;
+    try {
+      await addProductToOpportunity({
+        variables: { opportunityId: id, productId: selectedProductId, quantity: lineQuantity },
+      });
+      setSelectedProductId('');
+      setLineQuantity(1);
+      setShowAddProductModal(false);
+      refetch();
+    } catch (error: any) {
+      alert(`Erreur: ${error?.message || 'Erreur lors de l\'ajout'}`);
+    }
+  };
+
+  const handleAddKit = async () => {
+    if (!id || !selectedKitId) return;
+    try {
+      await addKitToOpportunity({
+        variables: { opportunityId: id, kitId: selectedKitId, quantity: lineQuantity },
+      });
+      setSelectedKitId('');
+      setLineQuantity(1);
+      setShowAddProductModal(false);
+      refetch();
+    } catch (error: any) {
+      alert(`Erreur: ${error?.message || 'Erreur lors de l\'ajout'}`);
+    }
+  };
+
+  const handleUpdateLineQuantity = async (lineId: string, newQuantity: number) => {
+    try {
+      await updateOpportunityLine({
+        variables: { lineId, quantity: newQuantity },
+      });
+      refetch();
+    } catch (error: any) {
+      alert(`Erreur: ${error?.message || 'Erreur lors de la modification'}`);
+    }
+  };
+
+  const handleRemoveLine = async (lineId: string) => {
+    if (!confirm('Supprimer cette ligne ?')) return;
+    try {
+      await removeOpportunityLine({ variables: { lineId } });
+      refetch();
+    } catch (error: any) {
+      alert(`Erreur: ${error?.message || 'Erreur lors de la suppression'}`);
+    }
+  };
 
   if (loading) {
     return <div className="loading">Chargement...</div>;
@@ -241,17 +345,13 @@ export default function OpportunityDetailPage() {
         <div className="opportunity-stats">
           <div className="stat">
             <Euro size={20} />
-            {isEditing ? (
-              <input
-                type="number"
-                name="amount"
-                value={formData.amount || 0}
-                onChange={handleChange}
-                className="edit-amount"
-              />
-            ) : (
-              <span className="stat-value">{formatCurrency(opportunity.amount)}</span>
-            )}
+            <span className="stat-value">
+              {formatCurrency(
+                opportunity.lines && opportunity.lines.length > 0
+                  ? opportunity.lines.reduce((sum, l) => sum + l.total, 0)
+                  : opportunity.amount
+              )}
+            </span>
             <span className="stat-label">Montant</span>
           </div>
           <div className="stat">
@@ -273,7 +373,13 @@ export default function OpportunityDetailPage() {
           </div>
           <div className="stat">
             <Euro size={20} style={{ opacity: 0.5 }} />
-            <span className="stat-value">{formatCurrency(opportunity.weightedAmount)}</span>
+            <span className="stat-value">
+              {formatCurrency(
+                ((opportunity.lines && opportunity.lines.length > 0
+                  ? opportunity.lines.reduce((sum, l) => sum + l.total, 0)
+                  : opportunity.amount) * opportunity.probability) / 100
+              )}
+            </span>
             <span className="stat-label">Pondéré</span>
           </div>
         </div>
@@ -285,42 +391,15 @@ export default function OpportunityDetailPage() {
           <div className="info-grid">
             <div className="info-item">
               <label>Contact principal</label>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="contactName"
-                  value={formData.contactName || ''}
-                  onChange={handleChange}
-                />
-              ) : (
-                <span>{opportunity.contactName}</span>
-              )}
+              <span>{opportunity.contactName}</span>
             </div>
             <div className="info-item">
               <label>Email</label>
-              {isEditing ? (
-                <input
-                  type="email"
-                  name="contactEmail"
-                  value={formData.contactEmail || ''}
-                  onChange={handleChange}
-                />
-              ) : (
-                <span>{opportunity.contactEmail || '—'}</span>
-              )}
+              <span>{opportunity.contactEmail || '—'}</span>
             </div>
             <div className="info-item">
               <label>Téléphone</label>
-              {isEditing ? (
-                <input
-                  type="tel"
-                  name="contactPhone"
-                  value={formData.contactPhone || ''}
-                  onChange={handleChange}
-                />
-              ) : (
-                <span>{opportunity.contactPhone || '—'}</span>
-              )}
+              <span>{opportunity.contactPhone || '—'}</span>
             </div>
             <div className="info-item">
               <label>Source</label>
@@ -381,6 +460,151 @@ export default function OpportunityDetailPage() {
             </div>
           </div>
         </section>
+
+        <section className="lines-section">
+          <div className="lines-header">
+            <h2><Package size={20} /> Lignes produits</h2>
+            {isEditing && (
+              <button 
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowAddProductModal(true)}
+              >
+                <Plus size={16} /> Ajouter
+              </button>
+            )}
+          </div>
+          {opportunity.lines && opportunity.lines.length > 0 ? (
+            <table className="lines-table">
+              <thead>
+                <tr>
+                  <th>Produit</th>
+                  <th>Qté</th>
+                  <th>Prix unit.</th>
+                  <th>Total</th>
+                  {isEditing && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {opportunity.lines.map((line) => (
+                  <tr key={line.id}>
+                    <td>{line.productName}</td>
+                    <td className="quantity-cell">
+                      {isEditing && (
+                        <button 
+                          className="qty-btn"
+                          onClick={() => handleUpdateLineQuantity(line.id, line.quantity - 1)}
+                          disabled={line.quantity <= 1}
+                        >
+                          <Minus size={14} />
+                        </button>
+                      )}
+                      <span>{line.quantity}</span>
+                      {isEditing && (
+                        <button 
+                          className="qty-btn"
+                          onClick={() => handleUpdateLineQuantity(line.id, line.quantity + 1)}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      )}
+                    </td>
+                    <td>{formatCurrency(line.unitPrice)}</td>
+                    <td>{formatCurrency(line.total)}</td>
+                    {isEditing && (
+                      <td>
+                        <button 
+                          className="btn-icon-danger"
+                          onClick={() => handleRemoveLine(line.id)}
+                          title="Supprimer"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={isEditing ? 4 : 3}><strong>Total</strong></td>
+                  <td><strong>{formatCurrency(opportunity.lines.reduce((sum, l) => sum + l.total, 0))}</strong></td>
+                </tr>
+              </tfoot>
+            </table>
+          ) : (
+            <p className="no-lines">
+              {isEditing 
+                ? 'Aucune ligne produit. Cliquez sur "Ajouter" pour sélectionner des produits ou kits.'
+                : 'Aucune ligne produit.'
+              }
+            </p>
+          )}
+        </section>
+
+        {showAddProductModal && (
+          <div className="modal-overlay" onClick={() => setShowAddProductModal(false)}>
+            <div className="modal add-product-modal" onClick={e => e.stopPropagation()}>
+              <div className="modal-header">
+                <h3>Ajouter un produit ou kit</h3>
+                <button className="btn-close" onClick={() => setShowAddProductModal(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Produit</label>
+                  <select 
+                    value={selectedProductId} 
+                    onChange={(e) => { setSelectedProductId(e.target.value); setSelectedKitId(''); }}
+                  >
+                    <option value="">-- Sélectionner un produit --</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} - {formatCurrency(p.unitPrice)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-divider">ou</div>
+                <div className="form-group">
+                  <label>Kit</label>
+                  <select 
+                    value={selectedKitId} 
+                    onChange={(e) => { setSelectedKitId(e.target.value); setSelectedProductId(''); }}
+                  >
+                    <option value="">-- Sélectionner un kit --</option>
+                    {kits.map((k) => (
+                      <option key={k.id} value={k.id}>
+                        {k.name} - {formatCurrency(k.price)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Quantité</label>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={lineQuantity} 
+                    onChange={(e) => setLineQuantity(parseInt(e.target.value) || 1)}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={() => setShowAddProductModal(false)}>
+                  Annuler
+                </button>
+                <button 
+                  className="btn btn-primary"
+                  onClick={selectedProductId ? handleAddProduct : handleAddKit}
+                  disabled={!selectedProductId && !selectedKitId}
+                >
+                  Ajouter
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="notes-section">
           <h2>Notes</h2>

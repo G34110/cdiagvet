@@ -22,6 +22,8 @@ model Tenant {
   users     User[]
   filieres  Filiere[]
   clients   Client[]
+  products  Product[]
+  productKits ProductKit[]
 
   @@map("tenants")
 }
@@ -75,6 +77,7 @@ model Filiere {
 
   responsables UserFiliere[] @relation("FilierResponsables")
   clients      ClientFiliere[]
+  products     Product[]
 
   @@unique([tenantId, code])
   @@map("filieres")
@@ -197,14 +200,30 @@ model Photo {
 // ============================================
 
 model Product {
-  id        String   @id @default(uuid())
-  gtin      String   @unique
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id          String    @id @default(uuid())
+  code        String
+  gtin        String?   @unique
+  name        String
+  description String?
+  unitPrice   Float     @default(0) @map("unit_price")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  lots      Lot[]
+  filiereId   String?   @map("filiere_id")
+  filiere     Filiere?  @relation(fields: [filiereId], references: [id])
 
+  tenantId    String    @map("tenant_id")
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  lots        Lot[]
+  kitItems    ProductKitItem[]
+  opportunityLines OpportunityLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([filiereId])
+  @@index([isActive])
   @@map("products")
 }
 
@@ -266,6 +285,46 @@ enum OrderStatus {
 }
 
 // ============================================
+// CATALOGUE PRODUITS (KITS)
+// ============================================
+
+model ProductKit {
+  id          String    @id @default(uuid())
+  code        String
+  name        String
+  description String?
+  price       Float
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  tenantId    String    @map("tenant_id")
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+
+  items       ProductKitItem[]
+  opportunityLines OpportunityLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([isActive])
+  @@map("product_kits")
+}
+
+model ProductKitItem {
+  id        String      @id @default(uuid())
+  quantity  Int         @default(1)
+
+  kitId     String      @map("kit_id")
+  kit       ProductKit  @relation(fields: [kitId], references: [id], onDelete: Cascade)
+
+  productId String      @map("product_id")
+  product   Product     @relation(fields: [productId], references: [id])
+
+  @@unique([kitId, productId])
+  @@map("product_kit_items")
+}
+
+// ============================================
 // PIPELINE & OPPORTUNITÉS
 // ============================================
 
@@ -318,6 +377,10 @@ model OpportunityLine {
   opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
 
   productId     String?     @map("product_id")
+  product       Product?    @relation(fields: [productId], references: [id])
+
+  kitId         String?     @map("kit_id")
+  kit           ProductKit? @relation(fields: [kitId], references: [id])
 
   @@map("opportunity_lines")
 }

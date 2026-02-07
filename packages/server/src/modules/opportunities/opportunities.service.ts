@@ -58,7 +58,7 @@ export class OpportunitiesService {
       include: {
         client: true,
         owner: true,
-        lines: true,
+        lines: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -84,7 +84,7 @@ export class OpportunitiesService {
       include: {
         client: true,
         owner: true,
-        lines: true,
+        lines: { orderBy: { createdAt: 'asc' } },
       },
       orderBy: { expectedCloseDate: 'asc' },
     });
@@ -108,7 +108,7 @@ export class OpportunitiesService {
       include: {
         client: true,
         owner: true,
-        lines: true,
+        lines: { orderBy: { createdAt: 'asc' } },
       },
     });
 
@@ -176,7 +176,7 @@ export class OpportunitiesService {
       include: {
         client: true,
         owner: true,
-        lines: true,
+        lines: { orderBy: { createdAt: 'asc' } },
       },
     });
 
@@ -243,7 +243,7 @@ export class OpportunitiesService {
       include: {
         client: true,
         owner: true,
-        lines: true,
+        lines: { orderBy: { createdAt: 'asc' } },
       },
     });
 
@@ -351,7 +351,7 @@ export class OpportunitiesService {
       include: {
         client: true,
         owner: true,
-        lines: true,
+        lines: { orderBy: { createdAt: 'asc' } },
       },
     });
 
@@ -403,5 +403,169 @@ export class OpportunitiesService {
     });
 
     return opportunity;
+  }
+
+  // ============================================
+  // OPPORTUNITY LINES MANAGEMENT
+  // ============================================
+
+  private async recalculateOpportunityAmount(opportunityId: string) {
+    const lines = await this.prisma.opportunityLine.findMany({
+      where: { opportunityId },
+    });
+
+    const totalAmount = lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+
+    await this.prisma.opportunity.update({
+      where: { id: opportunityId },
+      data: { amount: totalAmount },
+    });
+
+    return totalAmount;
+  }
+
+  async addProductLine(ctx: OpportunityContext, opportunityId: string, productId: string, quantity: number) {
+    // Verify access to opportunity
+    const opportunity = await this.findOne(ctx, opportunityId);
+
+    // Get product details
+    const product = await this.prisma.product.findFirst({
+      where: { id: productId, tenantId: ctx.tenantId, isActive: true },
+    });
+
+    if (!product) {
+      throw new NotFoundException('Produit non trouvé');
+    }
+
+    // Check if line already exists for this product
+    const existingLine = await this.prisma.opportunityLine.findFirst({
+      where: { opportunityId, productId },
+    });
+
+    let line;
+    if (existingLine) {
+      // Update quantity
+      line = await this.prisma.opportunityLine.update({
+        where: { id: existingLine.id },
+        data: { quantity: existingLine.quantity + quantity },
+      });
+    } else {
+      // Create new line
+      line = await this.prisma.opportunityLine.create({
+        data: {
+          opportunityId,
+          productId,
+          productName: product.name,
+          quantity,
+          unitPrice: product.unitPrice,
+        },
+      });
+    }
+
+    // Recalculate opportunity amount
+    await this.recalculateOpportunityAmount(opportunityId);
+
+    return this.findOne(ctx, opportunityId);
+  }
+
+  async addKitLine(ctx: OpportunityContext, opportunityId: string, kitId: string, quantity: number) {
+    // Verify access to opportunity
+    const opportunity = await this.findOne(ctx, opportunityId);
+
+    // Get kit details
+    const kit = await this.prisma.productKit.findFirst({
+      where: { id: kitId, tenantId: ctx.tenantId, isActive: true },
+    });
+
+    if (!kit) {
+      throw new NotFoundException('Kit non trouvé');
+    }
+
+    // Check if line already exists for this kit
+    const existingLine = await this.prisma.opportunityLine.findFirst({
+      where: { opportunityId, kitId },
+    });
+
+    let line;
+    if (existingLine) {
+      // Update quantity
+      line = await this.prisma.opportunityLine.update({
+        where: { id: existingLine.id },
+        data: { quantity: existingLine.quantity + quantity },
+      });
+    } else {
+      // Create new line
+      line = await this.prisma.opportunityLine.create({
+        data: {
+          opportunityId,
+          kitId,
+          productName: `Kit: ${kit.name}`,
+          quantity,
+          unitPrice: kit.price,
+        },
+      });
+    }
+
+    // Recalculate opportunity amount
+    await this.recalculateOpportunityAmount(opportunityId);
+
+    return this.findOne(ctx, opportunityId);
+  }
+
+  async updateLine(ctx: OpportunityContext, lineId: string, quantity: number) {
+    // Get the line
+    const line = await this.prisma.opportunityLine.findUnique({
+      where: { id: lineId },
+      include: { opportunity: true },
+    });
+
+    if (!line) {
+      throw new NotFoundException('Ligne non trouvée');
+    }
+
+    // Verify access to opportunity
+    await this.findOne(ctx, line.opportunityId);
+
+    if (quantity <= 0) {
+      // Delete the line if quantity is 0 or negative
+      await this.prisma.opportunityLine.delete({
+        where: { id: lineId },
+      });
+    } else {
+      // Update quantity
+      await this.prisma.opportunityLine.update({
+        where: { id: lineId },
+        data: { quantity },
+      });
+    }
+
+    // Recalculate opportunity amount
+    await this.recalculateOpportunityAmount(line.opportunityId);
+
+    return this.findOne(ctx, line.opportunityId);
+  }
+
+  async removeLine(ctx: OpportunityContext, lineId: string) {
+    // Get the line
+    const line = await this.prisma.opportunityLine.findUnique({
+      where: { id: lineId },
+    });
+
+    if (!line) {
+      throw new NotFoundException('Ligne non trouvée');
+    }
+
+    // Verify access to opportunity
+    await this.findOne(ctx, line.opportunityId);
+
+    // Delete the line
+    await this.prisma.opportunityLine.delete({
+      where: { id: lineId },
+    });
+
+    // Recalculate opportunity amount
+    await this.recalculateOpportunityAmount(line.opportunityId);
+
+    return this.findOne(ctx, line.opportunityId);
   }
 }

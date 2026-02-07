@@ -1,12 +1,12 @@
 import { ObjectType, Field, ID, Int } from '@nestjs/graphql';
 
-@ObjectType()
-export class Product {
+@ObjectType('LotProduct')
+export class LotProduct {
   @Field(() => ID)
   id: string;
 
-  @Field()
-  gtin: string;
+  @Field(() => String, { nullable: true })
+  gtin?: string | null;
 
   @Field()
   name: string;
@@ -32,8 +32,8 @@ export class Lot {
   @Field(() => Date)
   createdAt: Date;
 
-  @Field(() => Product)
-  product: Product;
+  @Field(() => LotProduct)
+  product: LotProduct;
 }
 
 @ObjectType()

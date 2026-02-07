@@ -3,9 +3,18 @@ import { useQuery, useMutation } from '@apollo/client';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Plus, Target, Euro, Calendar, User } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { OPPORTUNITIES_QUERY, CREATE_OPPORTUNITY_MUTATION, UPDATE_OPPORTUNITY_STATUS_MUTATION } from '../graphql/opportunities';
 import OpportunityForm from '../components/OpportunityForm';
 import './PipelinePage.css';
+
+interface OpportunityLine {
+  id: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
 
 interface Opportunity {
   id: string;
@@ -26,7 +35,13 @@ interface Opportunity {
     firstName: string;
     lastName: string;
   };
+  lines: OpportunityLine[];
 }
+
+const getOpportunityAmount = (opp: Opportunity) => 
+  opp.lines && opp.lines.length > 0 
+    ? opp.lines.reduce((sum, l) => sum + l.total, 0) 
+    : opp.amount;
 
 const STATUSES = [
   { key: 'NOUVEAU', label: 'Nouveau', color: '#6b7280', probability: 10 },
@@ -51,7 +66,7 @@ export default function PipelinePage() {
     opportunities.filter(opp => opp.status === status);
 
   const getStatusTotal = (status: string) => 
-    getOpportunitiesByStatus(status).reduce((sum, opp) => sum + opp.amount, 0);
+    getOpportunitiesByStatus(status).reduce((sum, opp) => sum + getOpportunityAmount(opp), 0);
 
   const handleCreateOpportunity = async (formData: any) => {
     try {
@@ -87,6 +102,35 @@ export default function PipelinePage() {
   const formatDate = (dateStr: string) => 
     new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
 
+  const triggerConfetti = () => {
+    // Tir de confettis festif 🎉
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    const colors = ['#10b981', '#34d399', '#6ee7b7', '#fbbf24', '#f59e0b'];
+
+    (function frame() {
+      confetti({
+        particleCount: 3,
+        angle: 60,
+        spread: 55,
+        origin: { x: 0 },
+        colors: colors,
+      });
+      confetti({
+        particleCount: 3,
+        angle: 120,
+        spread: 55,
+        origin: { x: 1 },
+        colors: colors,
+      });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    })();
+  };
+
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
@@ -105,6 +149,12 @@ export default function PipelinePage() {
           status: newStatus,
         },
       });
+      
+      // 🎉 Confettis si l'opportunité est gagnée !
+      if (newStatus === 'GAGNE') {
+        triggerConfetti();
+      }
+      
       refetch();
     } catch (error: any) {
       console.error('Erreur changement statut:', error);
@@ -181,7 +231,7 @@ export default function PipelinePage() {
                               <div className="card-meta">
                                 <span className="card-amount">
                                   <Euro size={14} />
-                                  {formatCurrency(opp.amount)}
+                                  {formatCurrency(getOpportunityAmount(opp))}
                                 </span>
                                 <span className="card-probability">
                                   {opp.probability}%
@@ -220,7 +270,7 @@ export default function PipelinePage() {
             <div key={opp.id} className="lost-item" onClick={() => navigate(`/pipeline/${opp.id}`)}>
               <span className="lost-client">{opp.client.name}</span>
               <span className="lost-title">{opp.title}</span>
-              <span className="lost-amount">{formatCurrency(opp.amount)}</span>
+              <span className="lost-amount">{formatCurrency(getOpportunityAmount(opp))}</span>
             </div>
           ))}
         </div>

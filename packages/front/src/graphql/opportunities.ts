@@ -34,6 +34,8 @@ export const OPPORTUNITIES_QUERY = gql`
         quantity
         unitPrice
         total
+        productId
+        kitId
       }
     }
   }
@@ -100,6 +102,8 @@ export const OPPORTUNITY_QUERY = gql`
         quantity
         unitPrice
         total
+        productId
+        kitId
       }
     }
   }
@@ -184,6 +188,78 @@ export const DELETE_OPPORTUNITY_MUTATION = gql`
   mutation DeleteOpportunity($id: String!) {
     deleteOpportunity(id: $id) {
       id
+    }
+  }
+`;
+
+export const ADD_PRODUCT_TO_OPPORTUNITY = gql`
+  mutation AddProductToOpportunity($opportunityId: String!, $productId: String!, $quantity: Int!) {
+    addProductToOpportunity(opportunityId: $opportunityId, productId: $productId, quantity: $quantity) {
+      id
+      amount
+      lines {
+        id
+        productName
+        quantity
+        unitPrice
+        total
+        productId
+        kitId
+      }
+    }
+  }
+`;
+
+export const ADD_KIT_TO_OPPORTUNITY = gql`
+  mutation AddKitToOpportunity($opportunityId: String!, $kitId: String!, $quantity: Int!) {
+    addKitToOpportunity(opportunityId: $opportunityId, kitId: $kitId, quantity: $quantity) {
+      id
+      amount
+      lines {
+        id
+        productName
+        quantity
+        unitPrice
+        total
+        productId
+        kitId
+      }
+    }
+  }
+`;
+
+export const UPDATE_OPPORTUNITY_LINE = gql`
+  mutation UpdateOpportunityLine($lineId: String!, $quantity: Int!) {
+    updateOpportunityLine(lineId: $lineId, quantity: $quantity) {
+      id
+      amount
+      lines {
+        id
+        productName
+        quantity
+        unitPrice
+        total
+        productId
+        kitId
+      }
+    }
+  }
+`;
+
+export const REMOVE_OPPORTUNITY_LINE = gql`
+  mutation RemoveOpportunityLine($lineId: String!) {
+    removeOpportunityLine(lineId: $lineId) {
+      id
+      amount
+      lines {
+        id
+        productName
+        quantity
+        unitPrice
+        total
+        productId
+        kitId
+      }
     }
   }
 `;

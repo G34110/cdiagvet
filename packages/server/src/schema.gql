@@ -119,6 +119,23 @@ input CreatePhotoInput {
   visitId: String!
 }
 
+input CreateProductInput {
+  code: String!
+  description: String
+  filiereId: String
+  gtin: String
+  name: String!
+  unitPrice: Float!
+}
+
+input CreateProductKitInput {
+  code: String!
+  description: String
+  items: [KitItemInput!]!
+  name: String!
+  price: Float!
+}
+
 input CreateVisitInput {
   clientId: String
   date: String!
@@ -164,6 +181,11 @@ type Filiere {
   name: String!
 }
 
+input KitItemInput {
+  productId: String!
+  quantity: Float! = 1
+}
+
 input LoginInput {
   email: String!
   password: String!
@@ -174,7 +196,7 @@ type Lot {
   expirationDate: DateTime
   id: ID!
   lotNumber: String!
-  product: Product!
+  product: LotProduct!
   rawBarcode: String
 }
 
@@ -191,6 +213,13 @@ type LotClient {
   quantity: Int!
 }
 
+type LotProduct {
+  createdAt: DateTime!
+  gtin: String
+  id: ID!
+  name: String!
+}
+
 type LotTraceability {
   clientCount: Int!
   deliveries: [LotClient!]!
@@ -199,25 +228,35 @@ type LotTraceability {
 }
 
 type Mutation {
+  addKitToOpportunity(kitId: String!, opportunityId: String!, quantity: Int! = 1): Opportunity!
+  addProductToOpportunity(opportunityId: String!, productId: String!, quantity: Int! = 1): Opportunity!
   assignOpportunity(newOwnerId: String!, opportunityId: String!): Opportunity!
   associateLotToClient(input: AssociateLotClientInput!): LotClient!
   createClient(input: CreateClientInput!): Client!
   createNote(input: CreateNoteInput!): Note!
   createOpportunity(input: CreateOpportunityInput!): Opportunity!
   createPhoto(input: CreatePhotoInput!): Photo!
+  createProduct(input: CreateProductInput!): Product!
+  createProductKit(input: CreateProductKitInput!): ProductKit!
   createVisit(input: CreateVisitInput!): Visit!
   deleteAllClients: Int!
   deleteClient(id: String!): Client!
   deleteNote(id: String!): Note!
   deleteOpportunity(id: String!): Opportunity!
   deletePhoto(id: String!): Photo!
+  deleteProduct(id: String!): Product!
+  deleteProductKit(id: String!): ProductKit!
   deleteVisit(id: String!): Visit!
   login(input: LoginInput!): AuthPayload!
+  removeOpportunityLine(lineId: String!): Opportunity!
   scanBarcode(input: ScanBarcodeInput!): ScanResult!
   updateClient(id: String!, input: UpdateClientInput!): Client!
   updateNote(id: String!, input: UpdateNoteInput!): Note!
   updateOpportunity(input: UpdateOpportunityInput!): Opportunity!
+  updateOpportunityLine(lineId: String!, quantity: Int!): Opportunity!
   updateOpportunityStatus(id: String!, lostComment: String, lostReason: String, status: String!): Opportunity!
+  updateProduct(id: String!, input: UpdateProductInput!): Product!
+  updateProductKit(id: String!, input: UpdateProductKitInput!): ProductKit!
   updateVisit(id: String!, input: UpdateVisitInput!): Visit!
 }
 
@@ -267,6 +306,7 @@ type OpportunityClient {
 
 type OpportunityLine {
   id: ID!
+  kitId: String
   productId: String
   productName: String!
   quantity: Int!
@@ -307,10 +347,44 @@ type Photo {
 }
 
 type Product {
+  code: String!
   createdAt: DateTime!
-  gtin: String!
+  description: String
+  filiere: ProductFiliere
+  filiereId: String
+  gtin: String
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  tenantId: String!
+  unitPrice: Float!
+  updatedAt: DateTime!
+}
+
+type ProductFiliere {
+  code: String!
   id: ID!
   name: String!
+}
+
+type ProductKit {
+  code: String!
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  isActive: Boolean!
+  items: [ProductKitItem!]!
+  name: String!
+  price: Float!
+  tenantId: String!
+  updatedAt: DateTime!
+}
+
+type ProductKitItem {
+  id: ID!
+  product: Product!
+  productId: String!
+  quantity: Float!
 }
 
 type Query {
@@ -336,6 +410,11 @@ type Query {
   opportunities: [Opportunity!]!
   opportunitiesByStatus(status: String!): [Opportunity!]!
   opportunity(id: String!): Opportunity!
+  product(id: String!): Product!
+  productKit(id: String!): ProductKit!
+  productKits(includeInactive: Boolean = false): [ProductKit!]!
+  products(includeInactive: Boolean = false): [Product!]!
+  productsByFiliere(filiereId: String!): [Product!]!
   searchLots(query: String!): [Lot!]!
   todayVisits: [Visit!]!
   upcomingVisits(days: Int = 7): [Visit!]!
@@ -401,6 +480,25 @@ input UpdateOpportunityInput {
   source: String
   status: String
   title: String
+}
+
+input UpdateProductInput {
+  code: String
+  description: String
+  filiereId: String
+  gtin: String
+  isActive: Boolean
+  name: String
+  unitPrice: Float
+}
+
+input UpdateProductKitInput {
+  code: String
+  description: String
+  isActive: Boolean
+  items: [KitItemInput!]
+  name: String
+  price: Float
 }
 
 input UpdateVisitInput {

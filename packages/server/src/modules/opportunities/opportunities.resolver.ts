@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -156,6 +156,84 @@ export class OpportunitiesResolver {
         filiereIds: user.filiereIds,
       },
       id,
+    );
+  }
+
+  // ============================================
+  // OPPORTUNITY LINES MUTATIONS
+  // ============================================
+
+  @Mutation(() => Opportunity)
+  async addProductToOpportunity(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('opportunityId') opportunityId: string,
+    @Args('productId') productId: string,
+    @Args('quantity', { type: () => Int, defaultValue: 1 }) quantity: number,
+  ) {
+    return this.opportunitiesService.addProductLine(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      opportunityId,
+      productId,
+      quantity,
+    );
+  }
+
+  @Mutation(() => Opportunity)
+  async addKitToOpportunity(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('opportunityId') opportunityId: string,
+    @Args('kitId') kitId: string,
+    @Args('quantity', { type: () => Int, defaultValue: 1 }) quantity: number,
+  ) {
+    return this.opportunitiesService.addKitLine(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      opportunityId,
+      kitId,
+      quantity,
+    );
+  }
+
+  @Mutation(() => Opportunity)
+  async updateOpportunityLine(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('lineId') lineId: string,
+    @Args('quantity', { type: () => Int }) quantity: number,
+  ) {
+    return this.opportunitiesService.updateLine(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      lineId,
+      quantity,
+    );
+  }
+
+  @Mutation(() => Opportunity)
+  async removeOpportunityLine(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('lineId') lineId: string,
+  ) {
+    return this.opportunitiesService.removeLine(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      lineId,
     );
   }
 }

@@ -287,3 +287,162 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Lines section */
+.lines-section {
+  background: white;
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.lines-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.lines-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  margin: 0;
+}
+
+.lines-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lines-table th,
+.lines-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.lines-table th {
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+  font-size: 0.875rem;
+}
+
+.lines-table td {
+  color: var(--text-primary, #1f2937);
+}
+
+.lines-table th:nth-child(2),
+.lines-table td:nth-child(2),
+.lines-table th:nth-child(3),
+.lines-table td:nth-child(3),
+.lines-table th:nth-child(4),
+.lines-table td:nth-child(4) {
+  text-align: right;
+  width: 100px;
+}
+
+.lines-table tfoot td {
+  border-bottom: none;
+  padding-top: 1rem;
+}
+
+.no-lines {
+  color: var(--text-secondary, #6b7280);
+  font-style: italic;
+  margin: 0;
+}
+
+.lines-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-sm {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.quantity-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.qty-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 0.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qty-btn:hover:not(:disabled) {
+  background: #e5e7eb;
+}
+
+.qty-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-icon-danger {
+  background: transparent;
+  border: none;
+  color: #dc2626;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.btn-icon-danger:hover {
+  background: #fef2f2;
+}
+
+/* Add product modal */
+.add-product-modal {
+  width: 400px;
+}
+
+.form-divider {
+  text-align: center;
+  color: var(--text-secondary, #6b7280);
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+
+.modal-body .form-group {
+  margin-bottom: 1rem;
+}
+
+.modal-body .form-group label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.modal-body .form-group select,
+.modal-body .form-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
