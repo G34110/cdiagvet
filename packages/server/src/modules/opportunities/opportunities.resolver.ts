@@ -6,6 +6,7 @@ import { OpportunitiesService } from './opportunities.service';
 import { Opportunity, CommercialUser } from './entities/opportunity.entity';
 import { CreateOpportunityInput } from './dto/create-opportunity.input';
 import { UpdateOpportunityInput } from './dto/update-opportunity.input';
+import { Order } from '../orders/entities/order.entity';
 
 interface CurrentUserPayload {
   id: string;
@@ -234,6 +235,22 @@ export class OpportunitiesResolver {
         filiereIds: user.filiereIds,
       },
       lineId,
+    );
+  }
+
+  @Mutation(() => Order, { description: 'Convertit une opportunité gagnée en commande' })
+  async convertOpportunityToOrder(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('opportunityId') opportunityId: string,
+  ) {
+    return this.opportunitiesService.convertToOrder(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      opportunityId,
     );
   }
 }

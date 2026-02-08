@@ -1,7 +1,8 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException, BadRequestException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateOpportunityInput } from './dto/create-opportunity.input';
 import { UpdateOpportunityInput } from './dto/update-opportunity.input';
+import { OrdersService } from '../orders/orders.service';
 
 interface OpportunityContext {
   tenantId: string;
@@ -30,7 +31,11 @@ const STATUS_ORDER: Record<string, number> = {
 
 @Injectable()
 export class OpportunitiesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => OrdersService))
+    private ordersService: OrdersService,
+  ) {}
 
   private buildWhereClause(ctx: OpportunityContext) {
     const baseWhere: any = { tenantId: ctx.tenantId };
@@ -100,7 +105,7 @@ export class OpportunitiesService {
   }
 
   async findOne(ctx: OpportunityContext, id: string) {
-    const opportunity = await this.prisma.opportunity.findFirst({
+    let opportunity = await this.prisma.opportunity.findFirst({
       where: {
         id,
         ...this.buildWhereClause(ctx),
@@ -114,6 +119,27 @@ export class OpportunitiesService {
 
     if (!opportunity) {
       throw new NotFoundException('Opportunité non trouvée');
+    }
+
+    // Règle: Si date de clôture dépassée et statut ni GAGNE, ni CONVERTI, ni PERDU -> passer en PERDU
+    const now = new Date();
+    const closeDate = new Date(opportunity.expectedCloseDate);
+    const excludedStatuses = ['GAGNE', 'CONVERTI', 'PERDU'];
+    
+    if (closeDate < now && !excludedStatuses.includes(opportunity.status)) {
+      opportunity = await this.prisma.opportunity.update({
+        where: { id },
+        data: { 
+          status: 'PERDU',
+          lostReason: 'Date de clôture dépassée',
+          probability: 0,
+        },
+        include: {
+          client: true,
+          owner: true,
+          lines: { orderBy: { createdAt: 'asc' } },
+        },
+      });
     }
 
     return {
@@ -567,5 +593,54 @@ export class OpportunitiesService {
     await this.recalculateOpportunityAmount(line.opportunityId);
 
     return this.findOne(ctx, line.opportunityId);
+  }
+
+  async convertToOrder(ctx: OpportunityContext, opportunityId: string) {
+    // Get opportunity with lines
+    const opportunity = await this.findOne(ctx, opportunityId);
+
+    // Verify opportunity is GAGNE
+    if (opportunity.status !== 'GAGNE') {
+      throw new BadRequestException('Seules les opportunités gagnées peuvent être converties en commande');
+    }
+
+    // Verify opportunity has at least one line
+    if (!opportunity.lines || opportunity.lines.length === 0) {
+      throw new BadRequestException('L\'opportunité doit contenir au moins un produit pour être convertie');
+    }
+
+    // Check if already converted
+    const existingOrder = await this.prisma.order.findFirst({
+      where: { opportunityId },
+    });
+
+    if (existingOrder) {
+      throw new BadRequestException('Cette opportunité a déjà été convertie en commande');
+    }
+
+    // Prepare lines for order
+    const orderLines = opportunity.lines.map(line => ({
+      productName: line.productName,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      productId: line.productId || undefined,
+      kitId: line.kitId || undefined,
+    }));
+
+    // Create order from opportunity
+    const order = await this.ordersService.createFromOpportunity(
+      { userId: ctx.userId, tenantId: ctx.tenantId, role: ctx.role },
+      opportunityId,
+      orderLines,
+      opportunity.clientId,
+    );
+
+    // Update opportunity status to CONVERTI
+    await this.prisma.opportunity.update({
+      where: { id: opportunityId },
+      data: { status: 'CONVERTI' },
+    });
+
+    return order;
   }
 }

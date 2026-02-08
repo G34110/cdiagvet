@@ -49,6 +49,7 @@ model User {
   visits       Visit[]
   auditLogs    AuditLog[]
   opportunities Opportunity[] @relation("OpportunityOwner")
+  orders       Order[] @relation("OrderOwner")
 
   @@map("users")
 }
@@ -219,6 +220,7 @@ model Product {
   lots        Lot[]
   kitItems    ProductKitItem[]
   opportunityLines OpportunityLine[]
+  orderLines  OrderLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -263,25 +265,68 @@ model LotClient {
 // ============================================
 
 model Order {
-  id        String      @id @default(uuid())
-  reference String      @unique
-  status    OrderStatus @default(PENDING)
-  total     Float       @default(0)
-  createdAt DateTime    @default(now()) @map("created_at")
-  updatedAt DateTime    @updatedAt @map("updated_at")
+  id                String      @id @default(uuid())
+  reference         String      @unique
+  status            OrderStatus @default(BROUILLON)
+  totalHT           Float       @default(0) @map("total_ht")
+  totalTTC          Float       @default(0) @map("total_ttc")
+  taxRate           Float       @default(20) @map("tax_rate")
+  expectedDelivery  DateTime?   @map("expected_delivery")
+  deliveredAt       DateTime?   @map("delivered_at")
+  trackingNumber    String?     @map("tracking_number")
+  notes             String?
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
+  validatedAt       DateTime?   @map("validated_at")
 
-  clientId  String      @map("client_id")
-  client    Client      @relation(fields: [clientId], references: [id])
+  clientId          String      @map("client_id")
+  client            Client      @relation(fields: [clientId], references: [id])
 
+  ownerId           String      @map("owner_id")
+  owner             User        @relation("OrderOwner", fields: [ownerId], references: [id])
+
+  opportunityId     String?     @map("opportunity_id")
+  opportunity       Opportunity? @relation(fields: [opportunityId], references: [id])
+
+  tenantId          String      @map("tenant_id")
+
+  lines             OrderLine[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@index([clientId])
+  @@index([opportunityId])
   @@map("orders")
 }
 
+model OrderLine {
+  id            String   @id @default(uuid())
+  productName   String   @map("product_name")
+  productCode   String?  @map("product_code")
+  quantity      Int      @default(1)
+  unitPrice     Float    @map("unit_price")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  orderId       String   @map("order_id")
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId     String?  @map("product_id")
+  product       Product? @relation(fields: [productId], references: [id])
+
+  kitId         String?  @map("kit_id")
+  kit           ProductKit? @relation(fields: [kitId], references: [id])
+
+  @@map("order_lines")
+}
+
 enum OrderStatus {
-  PENDING
-  CONFIRMED
-  SHIPPED
-  DELIVERED
-  CANCELLED
+  BROUILLON
+  VALIDEE
+  PREPARATION
+  EXPEDIEE
+  LIVREE
+  ANNULEE
 }
 
 // ============================================
@@ -303,6 +348,7 @@ model ProductKit {
 
   items       ProductKitItem[]
   opportunityLines OpportunityLine[]
+  orderLines  OrderLine[]
 
   @@unique([tenantId, code])
   @@index([tenantId])
@@ -358,6 +404,7 @@ model Opportunity {
   tenantId        String            @map("tenant_id")
 
   lines           OpportunityLine[]
+  orders          Order[]
 
   @@index([status])
   @@index([ownerId])
@@ -391,6 +438,7 @@ enum OpportunityStatus {
   PROPOSITION
   NEGOCIATION
   GAGNE
+  CONVERTI
   PERDU
 }
 

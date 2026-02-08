@@ -60,7 +60,8 @@ export default function PipelinePage() {
   const [createOpportunity, { loading: creating }] = useMutation(CREATE_OPPORTUNITY_MUTATION);
   const [updateStatus] = useMutation(UPDATE_OPPORTUNITY_STATUS_MUTATION);
 
-  const opportunities = data?.opportunities || [];
+  // Filtrer les opportunités converties (elles sont devenues des commandes)
+  const opportunities = (data?.opportunities || []).filter(opp => opp.status !== 'CONVERTI');
 
   const getOpportunitiesByStatus = (status: string) => 
     opportunities.filter(opp => opp.status === status);
@@ -141,14 +142,25 @@ export default function PipelinePage() {
     if (destination.droppableId === source.droppableId) return;
 
     const newStatus = destination.droppableId;
+    const oldStatus = source.droppableId;
+
+    console.log('Drag end:', { oldStatus, newStatus, draggableId });
+
+    // Règle: Une opportunité GAGNE ne peut pas passer à PERDU
+    if (oldStatus === 'GAGNE' && newStatus === 'PERDU') {
+      alert('Une opportunité gagnée ne peut pas être marquée comme perdue.');
+      return;
+    }
     
     try {
+      console.log('Calling updateStatus with:', { id: draggableId, status: newStatus });
       await updateStatus({
         variables: {
           id: draggableId,
           status: newStatus,
         },
       });
+      console.log('updateStatus success');
       
       // 🎉 Confettis si l'opportunité est gagnée !
       if (newStatus === 'GAGNE') {
@@ -261,20 +273,42 @@ export default function PipelinePage() {
             );
           })}
         </div>
-      </DragDropContext>
 
-      <div className="pipeline-lost">
-        <h3>Perdues ({getOpportunitiesByStatus('PERDU').length})</h3>
-        <div className="lost-list">
-          {getOpportunitiesByStatus('PERDU').map(opp => (
-            <div key={opp.id} className="lost-item" onClick={() => navigate(`/pipeline/${opp.id}`)}>
-              <span className="lost-client">{opp.client.name}</span>
-              <span className="lost-title">{opp.title}</span>
-              <span className="lost-amount">{formatCurrency(getOpportunityAmount(opp))}</span>
+        <Droppable droppableId="PERDU">
+          {(provided, snapshot) => (
+            <div 
+              className={`pipeline-lost ${snapshot.isDraggingOver ? 'dragging-over' : ''}`}
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+            >
+              <h3>Perdues ({getOpportunitiesByStatus('PERDU').length})</h3>
+              <div className="lost-list">
+                {getOpportunitiesByStatus('PERDU').map((opp, index) => (
+                  <Draggable key={opp.id} draggableId={opp.id} index={index}>
+                    {(provided, snapshot) => (
+                      <div 
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                        className={`lost-item ${snapshot.isDragging ? 'dragging' : ''}`}
+                        onClick={() => navigate(`/pipeline/${opp.id}`)}
+                      >
+                        <span className="lost-client">{opp.client.name}</span>
+                        <span className="lost-title">{opp.title}</span>
+                        <span className="lost-amount">{formatCurrency(getOpportunityAmount(opp))}</span>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+              </div>
+              {snapshot.isDraggingOver && (
+                <div className="drop-hint">Déposer ici pour marquer comme perdue</div>
+              )}
             </div>
-          ))}
-        </div>
-      </div>
+          )}
+        </Droppable>
+      </DragDropContext>
     </div>
   );
 }

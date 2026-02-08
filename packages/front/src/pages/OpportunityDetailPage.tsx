@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@apollo/client';
-import { ArrowLeft, Edit2, Save, X, Target, User, Calendar, Euro, TrendingUp, Trash2, Package, Plus, Minus } from 'lucide-react';
+import { ArrowLeft, Edit2, Save, X, Target, User, Calendar, Euro, TrendingUp, Trash2, Package, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { 
   OPPORTUNITY_QUERY, 
   UPDATE_OPPORTUNITY_MUTATION, 
@@ -13,6 +13,7 @@ import {
   UPDATE_OPPORTUNITY_LINE,
   REMOVE_OPPORTUNITY_LINE
 } from '../graphql/opportunities';
+import { CONVERT_OPPORTUNITY_TO_ORDER } from '../graphql/orders';
 import { PRODUCTS_QUERY, PRODUCT_KITS_QUERY } from '../graphql/products';
 import { useRecoilValue } from 'recoil';
 import { authState } from '../state/auth';
@@ -126,8 +127,10 @@ export default function OpportunityDetailPage() {
   const [addKitToOpportunity] = useMutation(ADD_KIT_TO_OPPORTUNITY);
   const [updateOpportunityLine] = useMutation(UPDATE_OPPORTUNITY_LINE);
   const [removeOpportunityLine] = useMutation(REMOVE_OPPORTUNITY_LINE);
+  const [convertToOrder, { loading: converting }] = useMutation(CONVERT_OPPORTUNITY_TO_ORDER);
 
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showConvertModal, setShowConvertModal] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState('');
   const [selectedKitId, setSelectedKitId] = useState('');
   const [lineQuantity, setLineQuantity] = useState(1);
@@ -259,6 +262,24 @@ export default function OpportunityDetailPage() {
     }
   };
 
+  const handleConvertToOrder = async () => {
+    if (!opportunity) return;
+    try {
+      const { data } = await convertToOrder({
+        variables: { opportunityId: opportunity.id },
+      });
+      setShowConvertModal(false);
+      if (data?.convertOpportunityToOrder?.reference) {
+        alert(`Commande ${data.convertOpportunityToOrder.reference} créée avec succès !`);
+        navigate('/commandes');
+      }
+    } catch (error: any) {
+      alert(`Erreur: ${error?.message || 'Erreur lors de la conversion'}`);
+    }
+  };
+
+  const canConvert = opportunity?.status === 'GAGNE' && opportunity?.lines?.length > 0;
+
   if (loading) {
     return <div className="loading">Chargement...</div>;
   }
@@ -288,7 +309,18 @@ export default function OpportunityDetailPage() {
             </>
           ) : (
             <>
-              <button className="btn-primary" onClick={startEditing}>
+              {canConvert && (
+                <button className="btn-success" onClick={() => setShowConvertModal(true)}>
+                  <ShoppingCart size={18} />
+                  Convertir en commande
+                </button>
+              )}
+              <button 
+                className="btn-primary" 
+                onClick={startEditing}
+                disabled={opportunity.status === 'GAGNE' || opportunity.status === 'CONVERTI'}
+                title={opportunity.status === 'GAGNE' || opportunity.status === 'CONVERTI' ? 'Modification impossible pour une opportunité gagnée' : ''}
+              >
                 <Edit2 size={18} />
                 Modifier
               </button>
@@ -634,6 +666,46 @@ export default function OpportunityDetailPage() {
           <p>Modifiée le {formatDate(opportunity.updatedAt)}</p>
         </section>
       </div>
+
+      {showConvertModal && (
+        <div className="modal-overlay">
+          <div className="modal convert-modal">
+            <h3>Convertir en commande</h3>
+            <p>Vous êtes sur le point de créer une commande à partir de cette opportunité.</p>
+            <div className="convert-summary">
+              <div className="summary-item">
+                <span className="summary-label">Client</span>
+                <span className="summary-value">{opportunity.client.name}</span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Montant</span>
+                <span className="summary-value">
+                  {formatCurrency(
+                    opportunity.lines?.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0) || 0
+                  )}
+                </span>
+              </div>
+              <div className="summary-item">
+                <span className="summary-label">Produits</span>
+                <span className="summary-value">{opportunity.lines?.length || 0} ligne(s)</span>
+              </div>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setShowConvertModal(false)}>
+                Annuler
+              </button>
+              <button 
+                className="btn-success" 
+                onClick={handleConvertToOrder}
+                disabled={converting}
+              >
+                <ShoppingCart size={16} />
+                {converting ? 'Conversion...' : 'Confirmer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

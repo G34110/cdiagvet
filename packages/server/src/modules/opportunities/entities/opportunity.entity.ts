@@ -6,6 +6,7 @@ export enum OpportunityStatus {
   PROPOSITION = 'PROPOSITION',
   NEGOCIATION = 'NEGOCIATION',
   GAGNE = 'GAGNE',
+  CONVERTI = 'CONVERTI',
   PERDU = 'PERDU',
 }
 

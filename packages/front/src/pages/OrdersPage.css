@@ -1,0 +1,266 @@
+.orders-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.orders-page .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.orders-page .page-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.75rem;
+  color: #111827;
+  margin: 0;
+}
+
+.orders-page .page-header p {
+  color: #6b7280;
+  margin: 0.25rem 0 0 0;
+}
+
+.orders-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  flex: 0 0 auto;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.stat-card.active {
+  border-color: inherit;
+  background: #f9fafb;
+}
+
+.stat-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.stat-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.stat-value {
+  font-size: 1rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.orders-toolbar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 0.875rem;
+}
+
+.search-box svg {
+  color: #9ca3af;
+}
+
+.btn-clear-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #374151;
+  transition: background 0.2s;
+}
+
+.btn-clear-filter:hover {
+  background: #e5e7eb;
+}
+
+.orders-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.orders-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.orders-table th {
+  text-align: left;
+  padding: 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.orders-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.orders-table tbody tr {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.orders-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.orders-table .no-data {
+  text-align: center;
+  padding: 3rem;
+  color: #9ca3af;
+}
+
+.ref-cell svg {
+  color: #3b82f6;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+
+.ref-cell {
+  font-weight: 500;
+  color: #111827;
+}
+
+.client-cell svg {
+  color: #9ca3af;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+
+.client-cell .client-info {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.client-name {
+  font-weight: 500;
+  display: block;
+}
+
+.client-city {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  display: block;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: white;
+}
+
+.amount-cell {
+  font-weight: 500;
+  color: #059669;
+}
+
+.amount-cell svg {
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
+.date-cell {
+  color: #6b7280;
+}
+
+.date-cell svg {
+  color: #9ca3af;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+
+.no-date {
+  color: #d1d5db;
+}
+
+.owner-cell {
+  color: #6b7280;
+}
+
+.owner-cell svg {
+  color: #9ca3af;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+  font-size: 1.125rem;
+  color: #6b7280;
+}

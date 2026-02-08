@@ -16,6 +16,8 @@ import LotTraceabilityPage from './pages/LotTraceabilityPage';
 import PipelinePage from './pages/PipelinePage';
 import OpportunityDetailPage from './pages/OpportunityDetailPage';
 import ProductsPage from './pages/ProductsPage';
+import OrdersPage from './pages/OrdersPage';
+import OrderDetailPage from './pages/OrderDetailPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const auth = useRecoilValue(authState);
@@ -47,6 +49,8 @@ function App() {
         <Route path="traceability" element={<LotTraceabilityPage />} />
         <Route path="pipeline" element={<PipelinePage />} />
         <Route path="pipeline/:id" element={<OpportunityDetailPage />} />
+        <Route path="commandes" element={<OrdersPage />} />
+        <Route path="commandes/:id" element={<OrderDetailPage />} />
         <Route path="products" element={<ProductsPage />} />
       </Route>
     </Routes>

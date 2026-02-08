@@ -131,22 +131,22 @@ export class DashboardService {
       where: lotsFilter,
     });
 
-    // Revenue from orders
+    // Revenue from validated orders only (VALIDEE, PREPARATION, EXPEDIEE, LIVREE)
     const orders = await this.prisma.order.aggregate({
       where: {
         client: clientFilter,
-        status: { not: 'CANCELLED' },
+        status: { in: ['VALIDEE', 'PREPARATION', 'EXPEDIEE', 'LIVREE'] as any },
       },
-      _sum: { total: true },
+      _sum: { totalHT: true },
     });
 
     const ordersThisMonth = await this.prisma.order.aggregate({
       where: {
         client: clientFilter,
-        status: { not: 'CANCELLED' },
-        createdAt: { gte: startDate, lte: endDate },
+        status: { in: ['VALIDEE', 'PREPARATION', 'EXPEDIEE', 'LIVREE'] as any },
+        validatedAt: { gte: startDate, lte: endDate },
       },
-      _sum: { total: true },
+      _sum: { totalHT: true },
     });
 
     return {
@@ -155,8 +155,8 @@ export class DashboardService {
       totalVisits,
       visitsThisMonth,
       totalLots,
-      totalRevenue: orders._sum.total || 0,
-      revenueThisMonth: ordersThisMonth._sum.total || 0,
+      totalRevenue: orders._sum?.totalHT || 0,
+      revenueThisMonth: ordersThisMonth._sum?.totalHT || 0,
     };
   }
 
@@ -263,19 +263,19 @@ export class DashboardService {
       const result = await this.prisma.order.aggregate({
         where: {
           client: clientFilter,
-          status: { not: 'CANCELLED' },
-          createdAt: {
+          status: { in: ['VALIDEE', 'PREPARATION', 'EXPEDIEE', 'LIVREE'] as any },
+          validatedAt: {
             gte: date,
             lte: monthEndDate,
           },
         },
-        _sum: { total: true },
+        _sum: { totalHT: true },
       });
 
       const monthName = date.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' });
       months.push({
         month: monthName,
-        revenue: result._sum.total || 0,
+        revenue: result._sum?.totalHT || 0,
       });
     }
 

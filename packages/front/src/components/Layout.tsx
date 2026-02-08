@@ -12,6 +12,7 @@ import {
   FileSearch,
   Target,
   Package,
+  ShoppingCart,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -19,6 +20,7 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/clients', icon: Users, label: 'Clients' },
   { to: '/pipeline', icon: Target, label: 'Opportunités' },
+  { to: '/commandes', icon: ShoppingCart, label: 'Commandes' },
   { to: '/products', icon: Package, label: 'Catalogue' },
   { to: '/calendar', icon: Calendar, label: 'Calendrier' },
   { to: '/map', icon: Map, label: 'Carte' },

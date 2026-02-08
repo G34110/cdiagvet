@@ -18,6 +18,7 @@ import { LotsModule } from './modules/lots/lots.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module';
 import { ProductsModule } from './modules/products/products.module';
+import { OrdersModule } from './modules/orders/orders.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { ProductsModule } from './modules/products/products.module';
     DashboardModule,
     OpportunitiesModule,
     ProductsModule,
+    OrdersModule,
   ],
 })
 export class AppModule {}

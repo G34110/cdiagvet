@@ -184,13 +184,33 @@
   padding: 1rem;
   background: #fef2f2;
   border-radius: 0.75rem;
-  border: 1px solid #fecaca;
+  border: 2px dashed #fecaca;
+  transition: all 0.2s;
+  min-height: 80px;
+}
+
+.pipeline-lost.dragging-over {
+  background: #fee2e2;
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
 }
 
 .pipeline-lost h3 {
   margin: 0 0 1rem 0;
   color: #dc2626;
   font-size: 1rem;
+}
+
+.drop-hint {
+  text-align: center;
+  padding: 1rem;
+  color: #dc2626;
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+.lost-item.dragging {
+  opacity: 0.5;
 }
 
 .lost-list {

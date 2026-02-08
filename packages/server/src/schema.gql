@@ -113,6 +113,22 @@ input CreateOpportunityInput {
   title: String!
 }
 
+input CreateOrderInput {
+  clientId: String!
+  expectedDelivery: DateTime
+  lines: [CreateOrderLineInput!]
+  notes: String
+}
+
+input CreateOrderLineInput {
+  kitId: String
+  productCode: String
+  productId: String
+  productName: String!
+  quantity: Int!
+  unitPrice: Float!
+}
+
 input CreatePhotoInput {
   caption: String
   url: String!
@@ -229,12 +245,18 @@ type LotTraceability {
 
 type Mutation {
   addKitToOpportunity(kitId: String!, opportunityId: String!, quantity: Int! = 1): Opportunity!
+  addOrderLine(line: CreateOrderLineInput!, orderId: String!): Order!
   addProductToOpportunity(opportunityId: String!, productId: String!, quantity: Int! = 1): Opportunity!
   assignOpportunity(newOwnerId: String!, opportunityId: String!): Opportunity!
   associateLotToClient(input: AssociateLotClientInput!): LotClient!
+  cancelOrder(id: String!): Order!
+
+  """Convertit une opportunité gagnée en commande"""
+  convertOpportunityToOrder(opportunityId: String!): Order!
   createClient(input: CreateClientInput!): Client!
   createNote(input: CreateNoteInput!): Note!
   createOpportunity(input: CreateOpportunityInput!): Opportunity!
+  createOrder(input: CreateOrderInput!): Order!
   createPhoto(input: CreatePhotoInput!): Photo!
   createProduct(input: CreateProductInput!): Product!
   createProductKit(input: CreateProductKitInput!): ProductKit!
@@ -243,21 +265,27 @@ type Mutation {
   deleteClient(id: String!): Client!
   deleteNote(id: String!): Note!
   deleteOpportunity(id: String!): Opportunity!
+  deleteOrder(id: String!): Boolean!
   deletePhoto(id: String!): Photo!
   deleteProduct(id: String!): Product!
   deleteProductKit(id: String!): ProductKit!
   deleteVisit(id: String!): Visit!
   login(input: LoginInput!): AuthPayload!
   removeOpportunityLine(lineId: String!): Opportunity!
+  removeOrderLine(lineId: String!): Order!
   scanBarcode(input: ScanBarcodeInput!): ScanResult!
   updateClient(id: String!, input: UpdateClientInput!): Client!
   updateNote(id: String!, input: UpdateNoteInput!): Note!
   updateOpportunity(input: UpdateOpportunityInput!): Opportunity!
   updateOpportunityLine(lineId: String!, quantity: Int!): Opportunity!
   updateOpportunityStatus(id: String!, lostComment: String, lostReason: String, status: String!): Opportunity!
+  updateOrder(input: UpdateOrderInput!): Order!
+  updateOrderLine(lineId: String!, quantity: Float!): Order!
+  updateOrderStatus(input: UpdateOrderStatusInput!): Order!
   updateProduct(id: String!, input: UpdateProductInput!): Product!
   updateProductKit(id: String!, input: UpdateProductKitInput!): ProductKit!
   updateVisit(id: String!, input: UpdateVisitInput!): Visit!
+  validateOrder(id: String!): Order!
 }
 
 type Note {
@@ -330,12 +358,58 @@ enum OpportunitySource {
 }
 
 enum OpportunityStatus {
+  CONVERTI
   GAGNE
   NEGOCIATION
   NOUVEAU
   PERDU
   PROPOSITION
   QUALIFICATION
+}
+
+type Order {
+  client: Client!
+  clientId: String!
+  createdAt: DateTime!
+  deliveredAt: DateTime
+  expectedDelivery: DateTime
+  id: String!
+  lines: [OrderLine!]!
+  notes: String
+  opportunityId: String
+  owner: User!
+  ownerId: String!
+  reference: String!
+  status: OrderStatus!
+  taxRate: Float!
+  total: Float!
+  totalHT: Float!
+  totalTTC: Float!
+  trackingNumber: String
+  updatedAt: DateTime!
+  validatedAt: DateTime
+}
+
+type OrderLine {
+  createdAt: DateTime!
+  id: String!
+  kitId: String
+  productCode: String
+  productId: String
+  productName: String!
+  quantity: Int!
+  total: Float!
+  unitPrice: Float!
+}
+
+"""Statut de la commande"""
+enum OrderStatus {
+  ANNULEE
+  BROUILLON
+  EXPEDIEE
+  LIVREE
+  PREPARATION
+  VALIDEE
 }
 
 type Photo {
@@ -410,6 +484,9 @@ type Query {
   opportunities: [Opportunity!]!
   opportunitiesByStatus(status: String!): [Opportunity!]!
   opportunity(id: String!): Opportunity!
+  order(id: String!): Order!
+  orders: [Order!]!
+  ordersByStatus(status: OrderStatus!): [Order!]!
   product(id: String!): Product!
   productKit(id: String!): ProductKit!
   productKits(includeInactive: Boolean = false): [ProductKit!]!
@@ -480,6 +557,21 @@ input UpdateOpportunityInput {
   source: String
   status: String
   title: String
+}
+
+input UpdateOrderInput {
+  expectedDelivery: DateTime
+  id: String!
+  notes: String
+  status: OrderStatus
+  taxRate: Float
+  trackingNumber: String
+}
+
+input UpdateOrderStatusInput {
+  id: String!
+  status: OrderStatus!
+  trackingNumber: String
 }
 
 input UpdateProductInput {

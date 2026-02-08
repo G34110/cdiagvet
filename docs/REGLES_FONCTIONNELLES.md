@@ -302,6 +302,13 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | Gagné | 100% |
 | Perdu | 0% |
 
+| Règle | Description |
+|-------|-------------|
+| **Transition vers Perdu** | Une opportunité peut passer au statut "Perdu" depuis n'importe quel statut SAUF "Gagné" |
+| **Blocage Gagné → Perdu** | Une opportunité au statut "Gagné" ne peut pas être marquée comme perdue |
+| **Date clôture dépassée** | Si la date de clôture prévue est dépassée, l'opportunité passe automatiquement en "Perdu" (sauf si Gagné/Converti) |
+| **Raison perte auto** | Lors d'une perte automatique, la raison est "Date de clôture dépassée" |
+
 | Cas de test | Actions | Résultat attendu |
 |-------------|---------|------------------|
 | CT6.2.1 | Accéder à la page Opportunités | Les opportunités sont affichées en colonnes par statut |
@@ -309,9 +316,12 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT6.2.3 | Cliquer sur une carte opportunité | Navigation vers le détail de l'opportunité |
 | CT6.2.4 | Glisser une carte de "Nouveau" vers "Qualification" | La carte se déplace, le statut est mis à jour, la probabilité passe à 25% |
 | CT6.2.5 | Glisser une carte vers "Gagné" | La carte passe en statut Gagné, probabilité 100% |
-| CT6.2.6 | Vérifier le feedback visuel pendant le drag | La carte a une ombre, la colonne cible est surlignée |
-| CT6.2.7 | En tant que Commercial, vérifier les opportunités affichées | Seules MES opportunités sont visibles |
-| CT6.2.8 | En tant que Responsable Filière, vérifier les opportunités | Toutes les opportunités de MA FILIÈRE sont visibles |
+| CT6.2.6 | Glisser une carte de "Nouveau" vers "Perdu" | La carte passe en Perdu, probabilité 0% |
+| CT6.2.7 | Glisser une carte de "Gagné" vers "Perdu" | Action bloquée avec message d'erreur |
+| CT6.2.8 | Ouvrir une opportunité dont la date de clôture est dépassée | L'opportunité passe automatiquement en Perdu |
+| CT6.2.9 | Vérifier le feedback visuel pendant le drag | La carte a une ombre, la colonne cible est surlignée |
+| CT6.2.10 | En tant que Commercial, vérifier les opportunités affichées | Seules MES opportunités sont visibles |
+| CT6.2.11 | En tant que Responsable Filière, vérifier les opportunités | Toutes les opportunités de MA FILIÈRE sont visibles |
 
 ### R6.3 - Consultation et modification d'opportunité
 **Description:** Un commercial peut consulter le détail d'une opportunité et modifier ses informations.
@@ -413,9 +423,91 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT6.7.6 | Cliquer sur la corbeille d'une ligne | La ligne est supprimée après confirmation, montant recalculé |
 | CT6.7.7 | Ajouter plusieurs produits et kits | Le montant total = somme de toutes les lignes |
 
+### R6.8 - Conversion Opportunité → Commande
+**Description:** Une opportunité gagnée peut être convertie en commande pour lancer le processus de vente.
+
+| Règle | Description |
+|-------|-------------|
+| **Condition** | Seules les opportunités au statut "Gagné" avec au moins 1 ligne produit peuvent être converties |
+| **Création commande** | Une commande est créée en statut "Brouillon" avec les lignes produits de l'opportunité |
+| **Lien bidirectionnel** | La commande conserve un lien vers l'opportunité source |
+| **Changement statut** | L'opportunité passe au statut "Converti" (sous-statut de Gagné) |
+| **Redirection** | L'utilisateur est redirigé vers la fiche commande pour validation |
+| **Unicité** | Une opportunité ne peut être convertie qu'une seule fois |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.8.1 | Sur une opportunité gagnée avec lignes, cliquer sur "Convertir en commande" | Une modal de confirmation s'affiche avec récapitulatif |
+| CT6.8.2 | Confirmer la conversion | Une commande est créée, redirection vers la fiche commande |
+| CT6.8.3 | Vérifier l'opportunité après conversion | Le statut est "Converti" |
+| CT6.8.4 | Tenter de convertir une opportunité sans produit | Message d'erreur, conversion bloquée |
+| CT6.8.5 | Tenter de convertir une opportunité déjà convertie | Message d'erreur, action bloquée |
+
 ---
 
-## 7. Interface Utilisateur
+## 8. Pipeline Commandes
+
+### R8.1 - Statuts des commandes
+**Description:** Les commandes suivent un workflow de statuts pour le suivi du processus de vente.
+
+| Statut | Description | Couleur |
+|--------|-------------|---------|
+| **Brouillon** | Commande créée, en attente de validation | Gris |
+| **Validée** | Commande confirmée, prête pour préparation | Bleu |
+| **Préparation** | Commande en cours de préparation | Violet |
+| **Expédiée** | Commande envoyée au client | Orange |
+| **Livrée** | Commande reçue par le client | Vert |
+| **Annulée** | Commande annulée | Rouge |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT8.1.1 | Créer une commande | Statut initial = Brouillon |
+| CT8.1.2 | Valider une commande | Statut passe à Validée, date de validation enregistrée |
+| CT8.1.3 | Faire avancer le statut | Chaque étape change le statut dans l'ordre |
+| CT8.1.4 | Annuler une commande non livrée | Statut passe à Annulée |
+| CT8.1.5 | Tenter d'annuler une commande livrée | Action bloquée avec message d'erreur |
+
+### R8.2 - Liste des commandes
+**Description:** Affichage et filtrage des commandes selon le rôle de l'utilisateur.
+
+| Règle | Description |
+|-------|-------------|
+| **Commercial** | Voit uniquement ses commandes |
+| **Responsable filière** | Voit toutes les commandes de sa filière |
+| **Admin** | Voit toutes les commandes |
+| **Filtrage** | Par statut, période, client, montant |
+| **Recherche** | Par référence ou nom client |
+| **Statistiques** | Nombre et montant par statut affichés |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT8.2.1 | Accéder au menu Commandes | Liste des commandes affichée avec statistiques |
+| CT8.2.2 | Cliquer sur une carte de statut | Filtre appliqué sur ce statut |
+| CT8.2.3 | Rechercher par référence | Commandes correspondantes affichées |
+| CT8.2.4 | Cliquer sur une commande | Redirection vers la fiche détaillée |
+
+### R8.3 - Fiche commande détaillée
+**Description:** Affichage complet d'une commande avec ses lignes et actions disponibles.
+
+| Règle | Description |
+|-------|-------------|
+| **Informations** | Client, commercial, dates, numéro de suivi |
+| **Lignes** | Produits avec quantité, prix unitaire, total |
+| **Totaux** | Montant HT, TVA, montant TTC |
+| **Actions** | Valider, faire avancer le statut, annuler (selon statut) |
+| **Historique** | Timeline des changements de statut |
+| **Lien opportunité** | Accès à l'opportunité source si existante |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT8.3.1 | Ouvrir une fiche commande | Toutes les informations sont affichées |
+| CT8.3.2 | Cliquer sur "Valider la commande" (brouillon) | Statut passe à Validée |
+| CT8.3.3 | Cliquer sur le lien opportunité | Redirection vers la fiche opportunité |
+| CT8.3.4 | Vérifier le calcul des totaux | Total HT = somme lignes, TTC = HT + TVA |
+
+---
+
+## 9. Interface Utilisateur
 
 ### R7.1 - Sidebar rétractable
 **Description:** Le panneau latéral gauche peut être réduit pour gagner de l'espace.
