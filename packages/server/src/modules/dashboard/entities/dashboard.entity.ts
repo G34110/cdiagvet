@@ -22,6 +22,9 @@ export class DashboardStats {
 
   @Field(() => Float)
   revenueThisMonth: number;
+
+  @Field(() => Float)
+  cancelledRevenue: number;
 }
 
 @ObjectType()
@@ -43,6 +46,18 @@ export class ClientAlert {
 }
 
 @ObjectType()
+export class RevenueDataPoint {
+  @Field()
+  label: string;
+
+  @Field(() => Float)
+  revenue: number;
+
+  @Field(() => Float)
+  cancelledRevenue: number;
+}
+
+@ObjectType()
 export class RevenueByMonth {
   @Field()
   month: string;
@@ -61,4 +76,7 @@ export class DashboardData {
 
   @Field(() => [RevenueByMonth])
   revenueByMonth: RevenueByMonth[];
+
+  @Field(() => [RevenueDataPoint])
+  revenueTrend: RevenueDataPoint[];
 }

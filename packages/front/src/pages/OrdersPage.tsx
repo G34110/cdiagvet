@@ -48,6 +48,8 @@ export default function OrdersPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
 
   const { data, loading } = useQuery<{ orders: Order[] }>(ORDERS_QUERY);
   const orders = data?.orders || [];
@@ -63,7 +65,23 @@ export default function OrdersPage() {
       order.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.client.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !statusFilter || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    
+    // Date filter on createdAt
+    let matchesDate = true;
+    if (startDate) {
+      const orderDate = new Date(order.createdAt);
+      const filterStart = new Date(startDate);
+      filterStart.setHours(0, 0, 0, 0);
+      matchesDate = matchesDate && orderDate >= filterStart;
+    }
+    if (endDate) {
+      const orderDate = new Date(order.createdAt);
+      const filterEnd = new Date(endDate);
+      filterEnd.setHours(23, 59, 59, 999);
+      matchesDate = matchesDate && orderDate <= filterEnd;
+    }
+    
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const getStatusStats = () => {
@@ -124,10 +142,30 @@ export default function OrdersPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        {statusFilter && (
-          <button className="btn-clear-filter" onClick={() => setStatusFilter('')}>
+        <div className="date-filters">
+          <div className="date-filter">
+            <Calendar size={16} />
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              title="Date de début"
+            />
+          </div>
+          <span className="date-separator">→</span>
+          <div className="date-filter">
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              title="Date de fin"
+            />
+          </div>
+        </div>
+        {(statusFilter || startDate || endDate) && (
+          <button className="btn-clear-filter" onClick={() => { setStatusFilter(''); setStartDate(''); setEndDate(''); }}>
             <Filter size={16} />
-            Effacer le filtre
+            Effacer les filtres
           </button>
         )}
       </div>

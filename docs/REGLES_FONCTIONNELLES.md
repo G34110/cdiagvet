@@ -220,30 +220,33 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 ### R5.4 - Sélection du type de graphique par KPI
 **Description:** L'utilisateur peut choisir le type de graphique (Barres, Courbe, Camembert) pour chaque KPI individuellement. Le choix est sauvegardé et persiste entre les sessions.
 
+**Règle spécifique:** Pour les périodes "Ce mois" et "Mois précédent" (affichage jour par jour), le graphique Camembert n'est pas disponible car il n'est pas pertinent pour des données journalières.
+
 | Cas de test | Actions | Résultat attendu |
 |-------------|---------|------------------|
 | CT5.4.1 | Sur le graphique "Évolution du CA", cliquer sur l'icône "Barres" | Le graphique s'affiche en barres |
 | CT5.4.2 | Sur le graphique "Évolution du CA", cliquer sur l'icône "Courbe" | Le graphique s'affiche en courbe |
-| CT5.4.3 | Sur le graphique "Évolution du CA", cliquer sur l'icône "Camembert" | Le graphique s'affiche en camembert avec légende |
-| CT5.4.4 | Changer le type de graphique puis rafraîchir la page | Le type de graphique choisi est conservé |
-| CT5.4.5 | Se déconnecter, se reconnecter sur le même navigateur | Le type de graphique choisi est conservé |
+| CT5.4.3 | Sélectionner "Trimestre précédent" puis cliquer sur "Camembert" | Le graphique s'affiche en camembert avec légende |
+| CT5.4.4 | Sélectionner "Ce mois" | Le bouton Camembert n'est pas affiché (seuls Barres et Courbe disponibles) |
+| CT5.4.5 | Changer le type de graphique puis rafraîchir la page | Le type de graphique choisi est conservé |
+| CT5.4.6 | Se déconnecter, se reconnecter sur le même navigateur | Le type de graphique choisi est conservé |
 
 ### R5.5 - Filtrage du tableau de bord par période
 **Description:** L'utilisateur peut filtrer les données du tableau de bord par période prédéfinie ou personnalisée. Les KPIs et graphiques sont recalculés selon la période sélectionnée.
 
-| Périodes disponibles | Description |
-|---------------------|-------------|
-| **Ce mois** | Mois en cours (par défaut) |
-| **Mois précédent** (M-1) | Le mois calendaire précédent |
-| **Trimestre précédent** (Q-1) | Les 3 mois du trimestre précédent |
-| **Année précédente** (Y-1) | L'année calendaire précédente |
-| **Personnalisé** | Dates de début et fin au choix |
+| Périodes disponibles | Description | Affichage graphique |
+|---------------------|-------------|---------------------|
+| **Ce mois** | Mois en cours (par défaut) | CA cumulé **jour par jour** (1, 2, 3... 31) |
+| **Mois précédent** (M-1) | Le mois calendaire précédent | CA cumulé **jour par jour** (1, 2, 3... 28/30/31) |
+| **Trimestre précédent** (Q-1) | Les 3 mois du trimestre précédent | CA cumulé **mois par mois** |
+| **Année précédente** (Y-1) | L'année calendaire précédente | CA cumulé **mois par mois** (12 mois) |
+| **Personnalisé** | Dates de début et fin au choix | Mois par mois |
 
 | Cas de test | Actions | Résultat attendu |
 |-------------|---------|------------------|
 | CT5.5.1 | Ouvrir le tableau de bord | La période "Ce mois" est sélectionnée par défaut |
-| CT5.5.2 | Cliquer sur le sélecteur de période et choisir "Mois précédent" | Les KPIs "Visites (période)" et "CA (période)" affichent les valeurs du mois précédent |
-| CT5.5.3 | Sélectionner "Trimestre précédent" | Le graphique "Évolution du CA" affiche 3 mois de données |
+| CT5.5.2 | Vérifier le graphique avec "Ce mois" | Le graphique affiche le CA jour par jour (axe X: 1, 2, 3... jusqu'au dernier jour du mois) |
+| CT5.5.3 | Sélectionner "Trimestre précédent" | Le graphique "Évolution du CA" affiche 3 mois de données (janv., févr., mars...) |
 | CT5.5.4 | Sélectionner "Année précédente" | Le graphique affiche les 12 mois de l'année précédente |
 | CT5.5.5 | Sélectionner "Personnalisé" puis choisir une date de début et de fin | Les champs de date apparaissent et les données sont filtrées sur la période choisie |
 | CT5.5.6 | Changer de période plusieurs fois | Les données se mettent à jour à chaque changement |
@@ -264,6 +267,46 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT5.6.4 | Exporter avec période personnalisée | Le rapport mentionne les dates personnalisées |
 | CT5.6.5 | Vérifier le contenu du PDF | Le PDF contient: nom utilisateur, date de génération, KPIs, évolution CA |
 | CT5.6.6 | Vérifier le contenu de l'Excel | L'Excel contient 2 onglets: "KPIs" et "CA par Mois" avec les données |
+
+### R5.7 - Calcul du Chiffre d'Affaires (CA)
+**Description:** Le CA affiché dans le dashboard est calculé uniquement à partir des commandes validées. Les commandes en brouillon ou annulées ne sont pas comptabilisées.
+
+| Statut commande | Comptabilisé dans le CA |
+|-----------------|-------------------------|
+| **BROUILLON** | ❌ Non |
+| **VALIDEE** | ✅ Oui |
+| **PREPARATION** | ✅ Oui |
+| **EXPEDIEE** | ✅ Oui |
+| **LIVREE** | ✅ Oui |
+| **ANNULEE** | ❌ Non |
+
+**Règle:** La date prise en compte pour le calcul du CA par période est la date de validation (`validatedAt`) et non la date de création.
+
+| Cas de test | Prérequis | Résultat attendu |
+|-------------|-----------|------------------|
+| CT5.7.1 | Créer une commande en BROUILLON de 1000€ | Le CA du dashboard n'augmente pas |
+| CT5.7.2 | Valider cette commande (passage à VALIDEE) | Le CA du dashboard augmente de 1000€ |
+| CT5.7.3 | Annuler une commande validée | Le CA du dashboard diminue du montant de la commande |
+| CT5.7.4 | Valider une commande le 15 janvier, consulter le dashboard en février | La commande apparaît dans le CA de janvier (date de validation) |
+
+### R5.8 - Affichage du CA des commandes annulées
+**Description:** Le CA des commandes annulées est affiché séparément sur le dashboard pour permettre un suivi des pertes.
+
+**Affichage:**
+- **Étiquette:** Sous le KPI "CA (période)", une ligne rouge affiche "Annulé: X €" si le montant est > 0
+- **Graphique:** Le CA annulé apparaît en rouge sur le graphique d'évolution
+
+**Règle d'empilement:**
+- Pour les périodes **Ce mois** et **Mois précédent** (jour par jour) : barres côte à côte (bleu = validé, rouge = annulé)
+- Pour les périodes **Trimestre précédent** et **Année précédente** (mois par mois) : barres empilées avec CA validé en bas (bleu) et CA annulé au-dessus (rouge)
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT5.8.1 | Aucune commande annulée sur la période | L'étiquette "Annulé" n'apparaît pas |
+| CT5.8.2 | Une commande annulée de 500€ sur la période | L'étiquette "Annulé: 500 €" apparaît en rouge sous le CA |
+| CT5.8.3 | Sélectionner "Ce mois" avec des commandes annulées | Le graphique affiche des barres côte à côte (bleu + rouge) |
+| CT5.8.4 | Sélectionner "Trimestre précédent" avec des commandes annulées | Le graphique affiche des barres empilées par mois |
+| CT5.8.5 | Survoler une barre du graphique | Le tooltip affiche "CA Validé" et "CA Annulé" séparément |
 
 ---
 

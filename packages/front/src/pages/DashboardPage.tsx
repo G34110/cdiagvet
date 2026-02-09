@@ -46,6 +46,7 @@ interface DashboardStats {
   totalLots: number;
   totalRevenue: number;
   revenueThisMonth: number;
+  cancelledRevenue: number;
 }
 
 interface ClientAlert {
@@ -61,10 +62,17 @@ interface RevenueByMonth {
   revenue: number;
 }
 
+interface RevenueDataPoint {
+  label: string;
+  revenue: number;
+  cancelledRevenue: number;
+}
+
 interface DashboardData {
   stats: DashboardStats;
   alerts: ClientAlert[];
   revenueByMonth: RevenueByMonth[];
+  revenueTrend: RevenueDataPoint[];
 }
 
 export default function DashboardPage() {
@@ -116,10 +124,11 @@ export default function DashboardPage() {
       label: 'CA (période)', 
       value: stats ? `${stats.revenueThisMonth.toLocaleString('fr-FR')} €` : '—', 
       icon: TrendingUp, 
-      color: '#8b5cf6' 
+      color: '#8b5cf6',
+      cancelledRevenue: stats?.cancelledRevenue,
     },
     { 
-      label: 'Lots livrés', 
+      label: 'Commandes livrées', 
       value: stats?.totalLots ?? '—', 
       icon: Package, 
       color: '#f59e0b' 
@@ -166,6 +175,11 @@ export default function DashboardPage() {
                   {stat.total !== undefined && (
                     <p className="stat-sublabel">sur {stat.total} total</p>
                   )}
+                  {stat.cancelledRevenue !== undefined && stat.cancelledRevenue > 0 && (
+                    <p className="stat-sublabel" style={{ color: '#ef4444', fontWeight: 500 }}>
+                      Annulé: {stat.cancelledRevenue.toLocaleString('fr-FR')} €
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
@@ -176,13 +190,19 @@ export default function DashboardPage() {
               chartId="revenue-evolution"
               title="Évolution du CA"
               icon={<TrendingUp size={20} />}
-              data={(dashboardData?.revenueByMonth || []).map(item => ({
-                name: item.month,
+              data={(dashboardData?.revenueTrend || []).map(item => ({
+                name: item.label,
                 value: item.revenue,
+                cancelledRevenue: item.cancelledRevenue,
               }))}
               color="#3b82f6"
               tooltipFormatter={(value) => `${value.toLocaleString('fr-FR')} €`}
-              tooltipLabel="CA"
+              tooltipLabel="CA Validé"
+              hidePieChart={periodFilter.preset === 'M' || periodFilter.preset === 'M-1' || !periodFilter.preset}
+              secondaryDataKey="cancelledRevenue"
+              secondaryLabel="CA Annulé"
+              secondaryColor="#ef4444"
+              stacked={periodFilter.preset === 'Q-1' || periodFilter.preset === 'Y-1'}
             />
 
             <section className="dashboard-section">

@@ -11,6 +11,7 @@ export const DASHBOARD_DATA_QUERY = gql`
         totalLots
         totalRevenue
         revenueThisMonth
+        cancelledRevenue
       }
       alerts {
         clientId
@@ -22,6 +23,11 @@ export const DASHBOARD_DATA_QUERY = gql`
       revenueByMonth {
         month
         revenue
+      }
+      revenueTrend {
+        label
+        revenue
+        cancelledRevenue
       }
     }
   }

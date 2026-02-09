@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { DashboardData, DashboardStats, ClientAlert, RevenueByMonth } from './entities/dashboard.entity';
+import { DashboardData, DashboardStats, ClientAlert, RevenueByMonth, RevenueDataPoint } from './entities/dashboard.entity';
 
 interface PeriodFilter {
   startDate?: string;
@@ -24,11 +24,13 @@ export class DashboardService {
     const stats = await this.getStats(ctx);
     const alerts = await this.getAlerts(ctx);
     const revenueByMonth = await this.getRevenueByMonth(ctx);
+    const revenueTrend = await this.getRevenueTrend(ctx);
 
     return {
       stats,
       alerts,
       revenueByMonth,
+      revenueTrend,
     };
   }
 
@@ -127,8 +129,13 @@ export class DashboardService {
       client: clientFilter,
     };
 
-    const totalLots = await this.prisma.lotClient.count({
-      where: lotsFilter,
+    // Count of delivered orders (status = LIVREE) for the period
+    const deliveredOrders = await this.prisma.order.count({
+      where: {
+        client: clientFilter,
+        status: 'LIVREE' as any,
+        validatedAt: { gte: startDate, lte: endDate },
+      },
     });
 
     // Revenue from validated orders only (VALIDEE, PREPARATION, EXPEDIEE, LIVREE)
@@ -149,14 +156,25 @@ export class DashboardService {
       _sum: { totalHT: true },
     });
 
+    // Cancelled orders revenue for the period
+    const cancelledOrders = await this.prisma.order.aggregate({
+      where: {
+        client: clientFilter,
+        status: 'ANNULEE',
+        updatedAt: { gte: startDate, lte: endDate },
+      },
+      _sum: { totalHT: true },
+    });
+
     return {
       totalClients,
       activeClients,
       totalVisits,
       visitsThisMonth,
-      totalLots,
+      totalLots: deliveredOrders,
       totalRevenue: orders._sum?.totalHT || 0,
       revenueThisMonth: ordersThisMonth._sum?.totalHT || 0,
+      cancelledRevenue: cancelledOrders._sum?.totalHT || 0,
     };
   }
 
@@ -280,5 +298,98 @@ export class DashboardService {
     }
 
     return months;
+  }
+
+  private async getRevenueTrend(ctx: DashboardContext): Promise<RevenueDataPoint[]> {
+    const dataPoints: RevenueDataPoint[] = [];
+    const clientFilter = this.buildClientFilter(ctx);
+    const { startDate, endDate } = this.resolvePeriod(ctx.filter);
+    const preset = ctx.filter?.preset || 'M';
+
+    // For current month (M) or previous month (M-1): day-by-day data
+    // For quarter (Q-1) or year (Y-1): month-by-month data
+    const isDailyView = preset === 'M' || preset === 'M-1';
+
+    if (isDailyView) {
+      // Day-by-day for current month
+      const daysInMonth = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0).getDate();
+      
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayStart = new Date(startDate.getFullYear(), startDate.getMonth(), day, 0, 0, 0);
+        const dayEnd = new Date(startDate.getFullYear(), startDate.getMonth(), day, 23, 59, 59);
+
+        const result = await this.prisma.order.aggregate({
+          where: {
+            client: clientFilter,
+            status: { in: ['VALIDEE', 'PREPARATION', 'EXPEDIEE', 'LIVREE'] as any },
+            validatedAt: {
+              gte: dayStart,
+              lte: dayEnd,
+            },
+          },
+          _sum: { totalHT: true },
+        });
+
+        const cancelledResult = await this.prisma.order.aggregate({
+          where: {
+            client: clientFilter,
+            status: 'ANNULEE',
+            updatedAt: {
+              gte: dayStart,
+              lte: dayEnd,
+            },
+          },
+          _sum: { totalHT: true },
+        });
+
+        dataPoints.push({
+          label: String(day),
+          revenue: result._sum?.totalHT || 0,
+          cancelledRevenue: cancelledResult._sum?.totalHT || 0,
+        });
+      }
+    } else {
+      // Month-by-month for quarter or year
+      const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1;
+      const numMonths = Math.min(Math.max(monthsDiff, 1), 12);
+
+      for (let i = 0; i < numMonths; i++) {
+        const monthStart = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+        const monthEnd = new Date(startDate.getFullYear(), startDate.getMonth() + i + 1, 0, 23, 59, 59);
+
+        const result = await this.prisma.order.aggregate({
+          where: {
+            client: clientFilter,
+            status: { in: ['VALIDEE', 'PREPARATION', 'EXPEDIEE', 'LIVREE'] as any },
+            validatedAt: {
+              gte: monthStart,
+              lte: monthEnd,
+            },
+          },
+          _sum: { totalHT: true },
+        });
+
+        const cancelledResult = await this.prisma.order.aggregate({
+          where: {
+            client: clientFilter,
+            status: 'ANNULEE',
+            updatedAt: {
+              gte: monthStart,
+              lte: monthEnd,
+            },
+          },
+          _sum: { totalHT: true },
+        });
+
+        const monthAbbreviations = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+        dataPoints.push({
+          label: monthAbbreviations[monthStart.getMonth()],
+          revenue: result._sum?.totalHT || 0,
+          cancelledRevenue: cancelledResult._sum?.totalHT || 0,
+        });
+      }
+    }
+
+    return dataPoints;
   }
 }

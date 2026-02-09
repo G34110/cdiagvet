@@ -162,6 +162,7 @@ input CreateVisitInput {
 type DashboardData {
   alerts: [ClientAlert!]!
   revenueByMonth: [RevenueByMonth!]!
+  revenueTrend: [RevenueDataPoint!]!
   stats: DashboardStats!
 }
 
@@ -178,6 +179,7 @@ input DashboardFilterInput {
 
 type DashboardStats {
   activeClients: Int!
+  cancelledRevenue: Float!
   revenueThisMonth: Float!
   totalClients: Int!
   totalLots: Int!
@@ -501,6 +503,12 @@ type Query {
 
 type RevenueByMonth {
   month: String!
+  revenue: Float!
+}
+
+type RevenueDataPoint {
+  cancelledRevenue: Float!
+  label: String!
   revenue: Float!
 }
 
