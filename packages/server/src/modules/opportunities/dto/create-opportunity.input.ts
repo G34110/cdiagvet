@@ -37,10 +37,17 @@ export class CreateOpportunityInput {
   @IsString()
   source: string;
 
-  @Field(() => Float)
+  @Field(() => Float, { nullable: true, defaultValue: 0 })
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  amount: number;
+  amount?: number;
+
+  @Field(() => Float, { nullable: true, defaultValue: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  manualAmount?: number;
 
   @Field(() => Int, { nullable: true })
   @IsOptional()

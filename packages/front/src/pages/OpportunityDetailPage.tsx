@@ -27,6 +27,7 @@ interface Opportunity {
   contactPhone?: string;
   source: string;
   amount: number;
+  manualAmount?: number;
   probability: number;
   expectedCloseDate: string;
   status: string;
@@ -194,6 +195,7 @@ export default function OpportunityDetailPage() {
       if (formData.probability !== undefined) input.probability = formData.probability;
       if (formData.expectedCloseDate) input.expectedCloseDate = formData.expectedCloseDate;
       if (formData.notes !== undefined) input.notes = formData.notes;
+      if (formData.manualAmount !== undefined) input.manualAmount = parseFloat(String(formData.manualAmount)) || 0;
 
       await updateOpportunity({ variables: { input } });
       setIsEditing(false);
@@ -378,11 +380,7 @@ export default function OpportunityDetailPage() {
           <div className="stat">
             <Euro size={20} />
             <span className="stat-value">
-              {formatCurrency(
-                opportunity.lines && opportunity.lines.length > 0
-                  ? opportunity.lines.reduce((sum, l) => sum + l.total, 0)
-                  : opportunity.amount
-              )}
+              {formatCurrency(opportunity.amount)}
             </span>
             <span className="stat-label">Montant</span>
           </div>
@@ -406,11 +404,7 @@ export default function OpportunityDetailPage() {
           <div className="stat">
             <Euro size={20} style={{ opacity: 0.5 }} />
             <span className="stat-value">
-              {formatCurrency(
-                ((opportunity.lines && opportunity.lines.length > 0
-                  ? opportunity.lines.reduce((sum, l) => sum + l.total, 0)
-                  : opportunity.amount) * opportunity.probability) / 100
-              )}
+              {formatCurrency((opportunity.amount * opportunity.probability) / 100)}
             </span>
             <span className="stat-label">Pondéré</span>
           </div>
@@ -558,8 +552,36 @@ export default function OpportunityDetailPage() {
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={isEditing ? 4 : 3}><strong>Total</strong></td>
+                  <td colSpan={isEditing ? 4 : 3}><strong>Total lignes</strong></td>
                   <td><strong>{formatCurrency(opportunity.lines.reduce((sum, l) => sum + l.total, 0))}</strong></td>
+                </tr>
+                <tr className="manual-amount-row">
+                  <td colSpan={isEditing ? 4 : 3}>Montant additionnel (saisie manuelle)</td>
+                  <td>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        name="manualAmount"
+                        value={formData.manualAmount ?? opportunity.manualAmount ?? 0}
+                        onChange={handleChange}
+                        min="0"
+                        step="0.01"
+                        className="edit-amount"
+                      />
+                    ) : (
+                      formatCurrency(opportunity.manualAmount ?? 0)
+                    )}
+                  </td>
+                </tr>
+                <tr className="grand-total-row">
+                  <td colSpan={isEditing ? 4 : 3}><strong>Total opportunité</strong></td>
+                  <td><strong>{formatCurrency(
+                    opportunity.lines.reduce((sum, l) => sum + l.total, 0) + 
+                    (isEditing 
+                      ? (parseFloat(String(formData.manualAmount ?? opportunity.manualAmount)) || 0)
+                      : (opportunity.manualAmount ?? 0)
+                    )
+                  )}</strong></td>
                 </tr>
               </tfoot>
             </table>
@@ -680,9 +702,7 @@ export default function OpportunityDetailPage() {
               <div className="summary-item">
                 <span className="summary-label">Montant</span>
                 <span className="summary-value">
-                  {formatCurrency(
-                    opportunity.lines?.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0) || 0
-                  )}
+                  {formatCurrency(opportunity.amount)}
                 </span>
               </div>
               <div className="summary-item">

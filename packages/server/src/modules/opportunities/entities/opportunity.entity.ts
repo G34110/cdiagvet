@@ -110,6 +110,9 @@ export class Opportunity {
   @Field(() => Float)
   amount: number;
 
+  @Field(() => Float, { nullable: true })
+  manualAmount?: number;
+
   @Field(() => Int)
   probability: number;
 

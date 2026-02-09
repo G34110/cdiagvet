@@ -76,6 +76,7 @@ export const OPPORTUNITY_QUERY = gql`
       contactPhone
       source
       amount
+      manualAmount
       probability
       expectedCloseDate
       status

@@ -4,7 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Plus, Target, Euro, Calendar, User } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { OPPORTUNITIES_QUERY, CREATE_OPPORTUNITY_MUTATION, UPDATE_OPPORTUNITY_STATUS_MUTATION } from '../graphql/opportunities';
+import { 
+  OPPORTUNITIES_QUERY, 
+  CREATE_OPPORTUNITY_MUTATION, 
+  UPDATE_OPPORTUNITY_STATUS_MUTATION,
+  ADD_PRODUCT_TO_OPPORTUNITY,
+  ADD_KIT_TO_OPPORTUNITY
+} from '../graphql/opportunities';
+import type { OpportunityFormData } from '../components/OpportunityForm';
 import OpportunityForm from '../components/OpportunityForm';
 import './PipelinePage.css';
 
@@ -38,10 +45,7 @@ interface Opportunity {
   lines: OpportunityLine[];
 }
 
-const getOpportunityAmount = (opp: Opportunity) => 
-  opp.lines && opp.lines.length > 0 
-    ? opp.lines.reduce((sum, l) => sum + l.total, 0) 
-    : opp.amount;
+const getOpportunityAmount = (opp: Opportunity) => opp.amount;
 
 const STATUSES = [
   { key: 'NOUVEAU', label: 'Nouveau', color: '#6b7280', probability: 10 },
@@ -59,6 +63,9 @@ export default function PipelinePage() {
   const { data, loading, refetch } = useQuery<{ opportunities: Opportunity[] }>(OPPORTUNITIES_QUERY);
   const [createOpportunity, { loading: creating }] = useMutation(CREATE_OPPORTUNITY_MUTATION);
   const [updateStatus] = useMutation(UPDATE_OPPORTUNITY_STATUS_MUTATION);
+  const [addProductToOpportunity] = useMutation(ADD_PRODUCT_TO_OPPORTUNITY);
+  const [addKitToOpportunity] = useMutation(ADD_KIT_TO_OPPORTUNITY);
+  const [isAddingLines, setIsAddingLines] = useState(false);
 
   // Filtrer les opportunités converties (elles sont devenues des commandes)
   const opportunities = (data?.opportunities || []).filter(opp => opp.status !== 'CONVERTI');
@@ -69,24 +76,63 @@ export default function PipelinePage() {
   const getStatusTotal = (status: string) => 
     getOpportunitiesByStatus(status).reduce((sum, opp) => sum + getOpportunityAmount(opp), 0);
 
-  const handleCreateOpportunity = async (formData: any) => {
+  const handleCreateOpportunity = async (formData: OpportunityFormData) => {
     try {
+      // Calculate total: manual amount + all pending lines
+      const linesTotal = formData.pendingLines.reduce(
+        (sum, line) => sum + line.quantity * line.unitPrice, 
+        0
+      );
+      const totalAmount = formData.amount + linesTotal;
+      
       // Filter out empty strings for optional fields
       const input: any = {
         clientId: formData.clientId,
         title: formData.title,
         contactName: formData.contactName,
         source: formData.source,
-        amount: parseFloat(formData.amount),
+        amount: totalAmount,
+        manualAmount: formData.amount,
         expectedCloseDate: formData.expectedCloseDate,
       };
       if (formData.contactEmail) input.contactEmail = formData.contactEmail;
       if (formData.contactPhone) input.contactPhone = formData.contactPhone;
       if (formData.notes) input.notes = formData.notes;
 
-      await createOpportunity({
+      const { data: createData } = await createOpportunity({
         variables: { input },
       });
+
+      const newOpportunityId = createData?.createOpportunity?.id;
+
+      // Add pending lines if any
+      if (newOpportunityId && formData.pendingLines.length > 0) {
+        setIsAddingLines(true);
+        try {
+          for (const line of formData.pendingLines) {
+            if (line.type === 'product') {
+              await addProductToOpportunity({
+                variables: {
+                  opportunityId: newOpportunityId,
+                  productId: line.itemId,
+                  quantity: line.quantity,
+                },
+              });
+            } else {
+              await addKitToOpportunity({
+                variables: {
+                  opportunityId: newOpportunityId,
+                  kitId: line.itemId,
+                  quantity: line.quantity,
+                },
+              });
+            }
+          }
+        } finally {
+          setIsAddingLines(false);
+        }
+      }
+
       setShowForm(false);
       refetch();
     } catch (error: any) {
@@ -94,6 +140,7 @@ export default function PipelinePage() {
       console.error('GraphQL errors:', error?.graphQLErrors);
       console.error('Network error:', error?.networkError);
       alert(`Erreur: ${error?.message || 'Erreur lors de la création'}`);
+      setIsAddingLines(false);
     }
   };
 
@@ -198,7 +245,7 @@ export default function PipelinePage() {
             <OpportunityForm
               onSubmit={handleCreateOpportunity}
               onCancel={() => setShowForm(false)}
-              isLoading={creating}
+              isLoading={creating || isAddingLines}
             />
           </div>
         </div>

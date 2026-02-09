@@ -382,6 +382,7 @@ model Opportunity {
   contactPhone    String?           @map("contact_phone")
   source          OpportunitySource
   amount          Float
+  manualAmount    Float             @default(0) @map("manual_amount")
   probability     Int               @default(10)
   probabilityHistory Json?          @map("probability_history")
   expectedCloseDate DateTime        @map("expected_close_date")

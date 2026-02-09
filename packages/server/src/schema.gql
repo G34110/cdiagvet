@@ -100,12 +100,13 @@ input CreateNoteInput {
 }
 
 input CreateOpportunityInput {
-  amount: Float!
+  amount: Float = 0
   clientId: String!
   contactEmail: String
   contactName: String!
   contactPhone: String
   expectedCloseDate: String!
+  manualAmount: Float = 0
   notes: String
   ownerId: String
   probability: Int
@@ -318,6 +319,7 @@ type Opportunity {
   lines: [OpportunityLine!]!
   lostComment: String
   lostReason: String
+  manualAmount: Float
   notes: String
   owner: OpportunityOwner!
   probability: Int!
@@ -550,7 +552,7 @@ input UpdateNoteInput {
 }
 
 input UpdateOpportunityInput {
-  amount: Float
+  amount: Float = 0
   clientId: String
   contactEmail: String
   contactName: String
@@ -559,6 +561,7 @@ input UpdateOpportunityInput {
   id: String!
   lostComment: String
   lostReason: String
+  manualAmount: Float = 0
   notes: String
   ownerId: String
   probability: Int

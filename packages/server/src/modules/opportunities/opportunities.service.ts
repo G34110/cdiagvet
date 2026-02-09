@@ -105,6 +105,7 @@ export class OpportunitiesService {
   }
 
   async findOne(ctx: OpportunityContext, id: string) {
+    // First try with full access control
     let opportunity = await this.prisma.opportunity.findFirst({
       where: {
         id,
@@ -117,7 +118,21 @@ export class OpportunitiesService {
       },
     });
 
+    // If not found with access control, check if it exists at all (for debugging)
     if (!opportunity) {
+      const exists = await this.prisma.opportunity.findFirst({
+        where: { id, tenantId: ctx.tenantId },
+        select: { id: true, ownerId: true },
+      });
+      if (exists) {
+        console.log('Opportunity exists but access denied:', { 
+          oppId: id, 
+          oppOwnerId: exists.ownerId,
+          userId: ctx.userId, 
+          role: ctx.role,
+          filiereIds: ctx.filiereIds 
+        });
+      }
       throw new NotFoundException('Opportunité non trouvée');
     }
 
@@ -170,6 +185,15 @@ export class OpportunitiesService {
 
     // Admin/Responsable can assign to a specific commercial, otherwise self
     let ownerId = ctx.userId;
+    
+    // Verify the current user exists
+    const currentUser = await this.prisma.user.findFirst({
+      where: { id: ctx.userId, tenantId: ctx.tenantId },
+    });
+    if (!currentUser) {
+      throw new ForbiddenException('Utilisateur non trouvé');
+    }
+    
     if (input.ownerId && (ctx.role === 'ADMIN' || ctx.role === 'RESPONSABLE_FILIERE')) {
       // Verify the target owner exists and is a commercial
       const targetOwner = await this.prisma.user.findFirst({
@@ -184,6 +208,8 @@ export class OpportunitiesService {
       }
     }
 
+    const manualAmount = input.manualAmount ?? 0;
+    const totalAmount = input.amount ?? manualAmount;
     const opportunity = await this.prisma.opportunity.create({
       data: {
         title: input.title,
@@ -191,14 +217,15 @@ export class OpportunitiesService {
         contactEmail: input.contactEmail,
         contactPhone: input.contactPhone,
         source: input.source as any,
-        amount: input.amount,
+        amount: totalAmount,
+        manualAmount: manualAmount,
         probability,
         expectedCloseDate: new Date(input.expectedCloseDate),
         notes: input.notes,
         clientId: input.clientId,
         ownerId,
         tenantId: ctx.tenantId,
-      },
+      } as any,
       include: {
         client: true,
         owner: true,
@@ -230,6 +257,7 @@ export class OpportunitiesService {
     if (input.contactPhone !== undefined) updateData.contactPhone = input.contactPhone;
     if (input.source !== undefined) updateData.source = input.source;
     if (input.amount !== undefined) updateData.amount = input.amount;
+    if (input.manualAmount !== undefined) updateData.manualAmount = input.manualAmount;
     if (input.expectedCloseDate !== undefined) updateData.expectedCloseDate = new Date(input.expectedCloseDate);
     if (input.notes !== undefined) updateData.notes = input.notes;
     if (input.ownerId !== undefined) updateData.ownerId = input.ownerId;
@@ -263,24 +291,18 @@ export class OpportunitiesService {
     // Explicit probability update always takes precedence
     if (input.probability !== undefined) updateData.probability = input.probability;
 
-    const opportunity = await this.prisma.opportunity.update({
+    await this.prisma.opportunity.update({
       where: { id: input.id },
       data: updateData,
-      include: {
-        client: true,
-        owner: true,
-        lines: { orderBy: { createdAt: 'asc' } },
-      },
     });
 
-    return {
-      ...opportunity,
-      weightedAmount: opportunity.amount * (opportunity.probability / 100),
-      lines: opportunity.lines.map(line => ({
-        ...line,
-        total: line.quantity * line.unitPrice,
-      })),
-    };
+    // If manualAmount was updated, recalculate total amount
+    if (input.manualAmount !== undefined) {
+      await this.recalculateOpportunityAmount(input.id);
+    }
+
+    // Fetch and return updated opportunity
+    return this.findOne(ctx, input.id);
   }
 
   async updateStatus(ctx: OpportunityContext, id: string, status: string, lostReason?: string, lostComment?: string) {
@@ -436,11 +458,20 @@ export class OpportunitiesService {
   // ============================================
 
   private async recalculateOpportunityAmount(opportunityId: string) {
+    const opportunity = await this.prisma.$queryRaw<{manualAmount: number}[]>`
+      SELECT manual_amount as "manualAmount" FROM opportunities WHERE id = ${opportunityId}
+    `;
+
     const lines = await this.prisma.opportunityLine.findMany({
       where: { opportunityId },
     });
 
-    const totalAmount = lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+    const linesTotal = lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+    // Ensure manualAmount is a proper number (raw query may return Decimal)
+    const manualAmount = Number(opportunity?.[0]?.manualAmount) || 0;
+    const totalAmount = manualAmount + linesTotal;
+    
+    console.log('recalculateOpportunityAmount:', { opportunityId, manualAmount, linesTotal, totalAmount });
 
     await this.prisma.opportunity.update({
       where: { id: opportunityId },

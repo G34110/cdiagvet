@@ -525,3 +525,20 @@
   justify-content: flex-end;
   gap: 0.75rem;
 }
+
+.manual-amount-row td {
+  color: #6b7280;
+}
+
+.grand-total-row td {
+  background: #f0fdf4;
+  color: #059669;
+}
+
+.edit-amount {
+  width: 100px;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.25rem;
+  text-align: right;
+}
