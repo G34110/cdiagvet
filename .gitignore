@@ -42,6 +42,20 @@ packages/server/prisma/*.db-journal
 # Docker volumes (local dev)
 docker/data/
 
+# Environment files with real values (NEVER commit!)
+# Only .env.dev, .env.demo, .env.prod templates are committed
+.env.production
+.env.local
+
+# SSL certificates
+docker/nginx/ssl/*.pem
+docker/nginx/ssl/*.key
+docker/nginx/ssl/*.crt
+
+# Uploads
+packages/server/uploads/*
+!packages/server/uploads/.gitkeep
+
 # Temporary
 tmp/
 temp/

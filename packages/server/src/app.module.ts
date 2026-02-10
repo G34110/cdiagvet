@@ -19,6 +19,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { OpportunitiesModule } from './modules/opportunities/opportunities.module';
 import { ProductsModule } from './modules/products/products.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { OrdersModule } from './modules/orders/orders.module';
     OpportunitiesModule,
     ProductsModule,
     OrdersModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

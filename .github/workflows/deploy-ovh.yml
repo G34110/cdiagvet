@@ -1,0 +1,157 @@
+# =============================================================================
+# GitHub Actions - Deploy to OVH VPS
+# Déploiement via SSH avec Docker Compose
+# =============================================================================
+
+name: Deploy to OVH VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DEPLOY_PATH: /home/cdiagvet/apps/cdiagvet
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Tests
+  # ---------------------------------------------------------------------------
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test --if-present
+
+  # ---------------------------------------------------------------------------
+  # Deploy
+  # ---------------------------------------------------------------------------
+  deploy:
+    name: Deploy to OVH VPS
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OVH_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.OVH_VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        run: |
+          ssh cdiagvet@${{ secrets.OVH_VPS_HOST }} << 'ENDSSH'
+            set -e
+            
+            echo "📦 Pulling latest code..."
+            cd ${{ env.DEPLOY_PATH }}
+            git fetch origin main
+            git reset --hard origin/main
+            
+            echo "🔨 Building Docker images..."
+            docker compose -f docker-compose.prod.yml build --no-cache
+            
+            echo "🔄 Stopping old containers..."
+            docker compose -f docker-compose.prod.yml down
+            
+            echo "🚀 Starting new containers..."
+            docker compose -f docker-compose.prod.yml up -d
+            
+            echo "⏳ Waiting for services to start..."
+            sleep 15
+            
+            echo "🗄️ Running database migrations..."
+            docker compose -f docker-compose.prod.yml exec -T server npx prisma migrate deploy
+            
+            echo "🧹 Cleaning up old images..."
+            docker image prune -f
+            
+            echo "✅ Deployment complete!"
+          ENDSSH
+
+  # ---------------------------------------------------------------------------
+  # Health Check
+  # ---------------------------------------------------------------------------
+  health-check:
+    name: Verify Deployment
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for services
+        run: sleep 30
+
+      - name: Check Backend Health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://api.cdiagvet.fr/health)
+          if [ "$response" != "200" ]; then
+            echo "❌ Backend health check failed with status $response"
+            exit 1
+          fi
+          echo "✅ Backend is healthy!"
+
+      - name: Check Frontend
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://app.cdiagvet.fr)
+          if [ "$response" != "200" ]; then
+            echo "❌ Frontend check failed with status $response"
+            exit 1
+          fi
+          echo "✅ Frontend is accessible!"
+
+      - name: Notify Success
+        if: success()
+        run: |
+          echo "🎉 Deployment to OVH VPS completed successfully!"
+          echo "Backend: https://api.cdiagvet.fr"
+          echo "Frontend: https://app.cdiagvet.fr"
+
+  # ---------------------------------------------------------------------------
+  # Rollback (manual trigger only)
+  # ---------------------------------------------------------------------------
+  rollback:
+    name: Rollback Deployment
+    if: github.event_name == 'workflow_dispatch' && failure()
+    needs: [deploy, health-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.OVH_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.OVH_VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Rollback via SSH
+        run: |
+          ssh cdiagvet@${{ secrets.OVH_VPS_HOST }} << 'ENDSSH'
+            set -e
+            cd ${{ env.DEPLOY_PATH }}
+            
+            echo "⏪ Rolling back to previous version..."
+            git reset --hard HEAD~1
+            
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml down
+            docker compose -f docker-compose.prod.yml up -d
+            
+            echo "✅ Rollback complete!"
+          ENDSSH

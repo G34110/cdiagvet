@@ -1,0 +1,153 @@
+# =============================================================================
+# docker-compose.prod.yml - Configuration Production CDiagVet
+# Usage: docker-compose -f docker-compose.prod.yml up -d
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:15-alpine
+    container_name: cdiagvet-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cdiagvet}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-cdiagvet}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cdiagvet}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cdiagvet-network
+
+  # ---------------------------------------------------------------------------
+  # PgBouncer - Connection Pooling
+  # ---------------------------------------------------------------------------
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: cdiagvet-pgbouncer
+    restart: always
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-cdiagvet}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cdiagvet}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 25
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - cdiagvet-network
+
+  # ---------------------------------------------------------------------------
+  # Redis - Cache & Sessions
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: cdiagvet-redis
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cdiagvet-network
+
+  # ---------------------------------------------------------------------------
+  # Backend - NestJS API
+  # ---------------------------------------------------------------------------
+  server:
+    build:
+      context: .
+      dockerfile: packages/server/Dockerfile
+    container_name: cdiagvet-server
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cdiagvet}:${POSTGRES_PASSWORD}@pgbouncer:5432/${POSTGRES_DB:-cdiagvet}
+      DIRECT_DATABASE_URL: postgresql://${POSTGRES_USER:-cdiagvet}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-cdiagvet}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      pgbouncer:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    networks:
+      - cdiagvet-network
+
+  # ---------------------------------------------------------------------------
+  # Frontend - React SPA (nginx)
+  # ---------------------------------------------------------------------------
+  front:
+    build:
+      context: .
+      dockerfile: packages/front/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000/graphql}
+        VITE_APP_ENV: production
+    container_name: cdiagvet-front
+    restart: always
+    depends_on:
+      server:
+        condition: service_healthy
+    networks:
+      - cdiagvet-network
+
+  # ---------------------------------------------------------------------------
+  # Nginx Reverse Proxy (optionnel - pour tout-en-un)
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: cdiagvet-proxy
+    restart: always
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - front
+      - server
+    networks:
+      - cdiagvet-network
+
+# -----------------------------------------------------------------------------
+# Volumes persistants
+# -----------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# -----------------------------------------------------------------------------
+# Network
+# -----------------------------------------------------------------------------
+networks:
+  cdiagvet-network:
+    driver: bridge
