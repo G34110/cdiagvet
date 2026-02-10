@@ -11,6 +11,9 @@
 3. [Option B : Scaleway + Cloudflare](#3-option-b--scaleway--cloudflare)
 4. [Option C : OVH VPS + Cloudflare](#4-option-c--ovh-vps--cloudflare)
 5. [Configuration Cloudflare (commune)](#5-configuration-cloudflare-commune)
+6. [Comparatif final](#6-comparatif-final)
+7. [Déployer plusieurs environnements (DEMO + PROD)](#7-déployer-plusieurs-environnements-demo--prod)
+8. [Troubleshooting](#8-troubleshooting)
 
 ---
 
@@ -583,7 +586,201 @@ Setting : Cache Level = Bypass
 
 ---
 
-## 7. Troubleshooting
+## 7. Déployer plusieurs environnements (DEMO + PROD)
+
+Pour avoir des environnements DEMO et PROD séparés, vous avez 3 options :
+
+### Option A : Deux serveurs VPS séparés (recommandé)
+
+```
+┌─────────────────────┐     ┌─────────────────────┐
+│   VPS DEMO          │     │   VPS PROD          │
+│   (DEV1-S ~€7/mois) │     │   (DEV1-M ~€14/mois)│
+│                     │     │                     │
+│   docker-compose    │     │   docker-compose    │
+│   .env.demo         │     │   .env.prod         │
+│   PostgreSQL DEMO   │     │   PostgreSQL PROD   │
+│   Redis DEMO        │     │   Redis PROD        │
+└─────────────────────┘     └─────────────────────┘
+        │                           │
+        ▼                           ▼
+  demo.cdiagvet.fr            app.cdiagvet.fr
+```
+
+#### Étapes pour chaque serveur
+
+```bash
+# 1. Se connecter au VPS
+ssh root@<IP_SERVEUR>
+
+# 2. Installer Docker
+curl -fsSL https://get.docker.com | sh
+
+# 3. Cloner le repo
+git clone https://github.com/votre-user/cdiagvet.git
+cd cdiagvet
+
+# 4. Copier le bon fichier .env
+cp .env.demo .env      # Pour DEMO
+# ou
+cp .env.prod .env      # Pour PROD
+
+# 5. Éditer .env avec les vrais mots de passe
+nano .env
+
+# 6. Lancer
+docker compose -f docker-compose.demo.yml up -d   # Pour DEMO
+# ou
+docker compose -f docker-compose.prod.yml up -d   # Pour PROD
+```
+
+| Avantages | Inconvénients |
+|-----------|---------------|
+| ✅ Isolation totale | ❌ Coût plus élevé (~€21/mois) |
+| ✅ Simple à gérer | ❌ Maintenance x2 |
+| ✅ Pas d'interférence | |
+
+---
+
+### Option B : Un seul serveur avec 2 stacks (économique)
+
+```bash
+# Sur le même serveur, 2 dossiers distincts
+
+/srv/cdiagvet-demo/
+├── .env              ← copie de .env.demo
+├── docker-compose.yml
+└── (données isolées)
+
+/srv/cdiagvet-prod/
+├── .env              ← copie de .env.prod
+├── docker-compose.yml
+└── (données isolées)
+```
+
+#### Configuration des ports
+
+Modifier `docker-compose.demo.yml` pour utiliser des ports différents :
+
+```yaml
+# docker-compose.demo.yml - DEMO sur ports 8080/8443
+services:
+  frontend-demo:
+    ports:
+      - "8080:80"
+  backend-demo:
+    ports:
+      - "3001:3000"
+```
+
+```yaml
+# docker-compose.prod.yml - PROD sur ports 80/443
+services:
+  frontend-prod:
+    ports:
+      - "80:80"
+  backend-prod:
+    ports:
+      - "3000:3000"
+```
+
+#### Nginx reverse proxy (sur le serveur hôte)
+
+```nginx
+# /etc/nginx/sites-available/cdiagvet
+
+# DEMO
+server {
+    listen 443 ssl;
+    server_name demo.cdiagvet.fr;
+    
+    location / {
+        proxy_pass http://localhost:8080;
+    }
+    location /graphql {
+        proxy_pass http://localhost:3001;
+    }
+}
+
+# PROD
+server {
+    listen 443 ssl;
+    server_name app.cdiagvet.fr;
+    
+    location / {
+        proxy_pass http://localhost:80;
+    }
+    location /graphql {
+        proxy_pass http://localhost:3000;
+    }
+}
+```
+
+| Avantages | Inconvénients |
+|-----------|---------------|
+| ✅ Économique (~€14/mois) | ⚠️ Ressources partagées |
+| ✅ Un seul serveur à gérer | ⚠️ Impact mutuel possible |
+
+---
+
+### Option C : Scaleway Serverless Containers
+
+Déployer 2 instances du même conteneur avec des variables différentes :
+
+```bash
+# 1. Builder l'image une seule fois
+docker build -t rg.fr-par.scw.cloud/cdiagvet/backend:latest -f packages/server/Dockerfile .
+docker push rg.fr-par.scw.cloud/cdiagvet/backend:latest
+
+# 2. Dans la console Scaleway, créer 2 containers :
+#    - cdiagvet-backend-demo (avec variables .env.demo)
+#    - cdiagvet-backend-prod (avec variables .env.prod)
+```
+
+#### Variables par conteneur
+
+**Container DEMO :**
+```env
+NODE_ENV=staging
+DATABASE_URL=postgresql://...demo-db...
+CORS_ORIGIN=https://demo.cdiagvet.fr
+```
+
+**Container PROD :**
+```env
+NODE_ENV=production
+DATABASE_URL=postgresql://...prod-db...
+CORS_ORIGIN=https://app.cdiagvet.fr
+```
+
+| Avantages | Inconvénients |
+|-----------|---------------|
+| ✅ Isolation totale | ❌ Coût variable selon usage |
+| ✅ Auto-scaling | ❌ Configuration console |
+| ✅ Pas de maintenance serveur | |
+
+---
+
+### Récapitulatif multi-environnement
+
+| Option | Coût | Complexité | Isolation |
+|--------|------|------------|-----------|
+| A - 2 VPS | ~€21/mois | ⭐ Simple | ✅ Totale |
+| B - 1 VPS | ~€14/mois | ⭐⭐ Moyen | ⚠️ Partielle |
+| C - Serverless | Variable | ⭐⭐⭐ | ✅ Totale |
+
+### Configuration DNS Cloudflare
+
+| Environnement | Sous-domaine | Cible |
+|---------------|--------------|-------|
+| DEMO | `demo.cdiagvet.fr` | IP VPS DEMO ou container Scaleway |
+| DEMO API | `demo-api.cdiagvet.fr` | IP VPS DEMO ou container Scaleway |
+| PROD | `app.cdiagvet.fr` | IP VPS PROD ou container Scaleway |
+| PROD API | `api.cdiagvet.fr` | IP VPS PROD ou container Scaleway |
+
+---
+
+## 8. Troubleshooting
 
 ### Problème : Container ne démarre pas
 
