@@ -13,6 +13,7 @@ import {
 } from '../graphql/opportunities';
 import type { OpportunityFormData } from '../components/OpportunityForm';
 import OpportunityForm from '../components/OpportunityForm';
+import LostReasonModal from '../components/LostReasonModal';
 import './PipelinePage.css';
 
 interface OpportunityLine {
@@ -22,6 +23,15 @@ interface OpportunityLine {
   unitPrice: number;
   total: number;
 }
+
+const LOST_REASON_LABELS: Record<string, string> = {
+  PRIX_TROP_ELEVE: 'Prix trop élevé',
+  CONCURRENT: 'Concurrent',
+  TIMING_BUDGET: 'Timing/Budget',
+  BESOIN_ANNULE: 'Besoin annulé',
+  PAS_DE_REPONSE: 'Pas de réponse',
+  AUTRE: 'Autre',
+};
 
 interface Opportunity {
   id: string;
@@ -33,6 +43,8 @@ interface Opportunity {
   expectedCloseDate: string;
   status: string;
   weightedAmount: number;
+  lostReason?: string;
+  lostComment?: string;
   client: {
     id: string;
     name: string;
@@ -56,9 +68,17 @@ const STATUSES = [
   { key: 'PERDU', label: 'Perdu', color: '#ef4444', probability: 0 },
 ];
 
+interface PendingLostOpportunity {
+  id: string;
+  title: string;
+  clientName: string;
+}
+
 export default function PipelinePage() {
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
+  const [pendingLostOpportunity, setPendingLostOpportunity] = useState<PendingLostOpportunity | null>(null);
+  const [isUpdatingLost, setIsUpdatingLost] = useState(false);
 
   const { data, loading, refetch } = useQuery<{ opportunities: Opportunity[] }>(OPPORTUNITIES_QUERY);
   const [createOpportunity, { loading: creating }] = useMutation(CREATE_OPPORTUNITY_MUTATION);
@@ -198,6 +218,19 @@ export default function PipelinePage() {
       alert('Une opportunité gagnée ne peut pas être marquée comme perdue.');
       return;
     }
+
+    // Si on passe à PERDU, afficher la modal pour demander le motif
+    if (newStatus === 'PERDU') {
+      const opp = opportunities.find(o => o.id === draggableId);
+      if (opp) {
+        setPendingLostOpportunity({
+          id: opp.id,
+          title: opp.title,
+          clientName: opp.client.name,
+        });
+      }
+      return;
+    }
     
     try {
       console.log('Calling updateStatus with:', { id: draggableId, status: newStatus });
@@ -218,6 +251,36 @@ export default function PipelinePage() {
     } catch (error: any) {
       console.error('Erreur changement statut:', error);
       alert(`Erreur: ${error?.message || 'Erreur lors du changement de statut'}`);
+    }
+  };
+
+  const handleConfirmLost = async (reason: string, comment: string, competitorName?: string) => {
+    if (!pendingLostOpportunity) return;
+
+    setIsUpdatingLost(true);
+    try {
+      // Construire le commentaire complet
+      let fullComment = comment;
+      if (competitorName) {
+        fullComment = `Concurrent: ${competitorName}${comment ? '\n' + comment : ''}`;
+      }
+
+      await updateStatus({
+        variables: {
+          id: pendingLostOpportunity.id,
+          status: 'PERDU',
+          lostReason: reason,
+          lostComment: fullComment || null,
+        },
+      });
+
+      setPendingLostOpportunity(null);
+      refetch();
+    } catch (error: any) {
+      console.error('Erreur marquage perdue:', error);
+      alert(`Erreur: ${error?.message || 'Erreur lors du marquage'}`);
+    } finally {
+      setIsUpdatingLost(false);
     }
   };
 
@@ -249,6 +312,16 @@ export default function PipelinePage() {
             />
           </div>
         </div>
+      )}
+
+      {pendingLostOpportunity && (
+        <LostReasonModal
+          opportunityTitle={pendingLostOpportunity.title}
+          clientName={pendingLostOpportunity.clientName}
+          onConfirm={handleConfirmLost}
+          onCancel={() => setPendingLostOpportunity(null)}
+          isLoading={isUpdatingLost}
+        />
       )}
 
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -342,6 +415,9 @@ export default function PipelinePage() {
                       >
                         <span className="lost-client">{opp.client.name}</span>
                         <span className="lost-title">{opp.title}</span>
+                        {opp.lostReason && (
+                          <span className="lost-reason">{LOST_REASON_LABELS[opp.lostReason] || opp.lostReason}</span>
+                        )}
                         <span className="lost-amount">{formatCurrency(getOpportunityAmount(opp))}</span>
                       </div>
                     )}

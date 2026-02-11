@@ -13,6 +13,8 @@ export const OPPORTUNITIES_QUERY = gql`
       probability
       expectedCloseDate
       status
+      lostReason
+      lostComment
       notes
       createdAt
       updatedAt
@@ -260,6 +262,51 @@ export const REMOVE_OPPORTUNITY_LINE = gql`
         total
         productId
         kitId
+      }
+    }
+  }
+`;
+
+export const OPPORTUNITY_TIMELINE_QUERY = gql`
+  query OpportunityTimeline($opportunityId: String!) {
+    opportunityTimeline(opportunityId: $opportunityId) {
+      events {
+        id
+        type
+        description
+        metadata
+        createdAt
+        user {
+          id
+          firstName
+          lastName
+        }
+      }
+      notes {
+        id
+        content
+        createdAt
+        updatedAt
+        author {
+          id
+          firstName
+          lastName
+        }
+      }
+    }
+  }
+`;
+
+export const ADD_OPPORTUNITY_NOTE = gql`
+  mutation AddOpportunityNote($input: AddOpportunityNoteInput!) {
+    addOpportunityNote(input: $input) {
+      id
+      content
+      createdAt
+      author {
+        id
+        firstName
+        lastName
       }
     }
   }

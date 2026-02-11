@@ -13,7 +13,9 @@
 5. [Configuration Cloudflare (commune)](#5-configuration-cloudflare-commune)
 6. [Comparatif final](#6-comparatif-final)
 7. [Déployer plusieurs environnements (DEMO + PROD)](#7-déployer-plusieurs-environnements-demo--prod)
-8. [Troubleshooting](#8-troubleshooting)
+8. [Comparaison PaaS vs Serverless](#8-comparaison-paas-vs-serverless)
+9. [Architecture mixte recommandée (DEMO + PROD)](#9-architecture-mixte-recommandée-demo--prod)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -30,7 +32,7 @@
 ### 1.2 Domaine
 
 - Acheter un domaine (ex: `cdiagvet.fr`) sur OVH, Gandi, ou Cloudflare Registrar
-- Configurer les DNS sur Cloudflare (voir section 5)
+- Configurer les DNS sur Cloudflare (voir [section 5](#5-configuration-cloudflare-commune))
 
 ### 1.3 Fichiers déjà créés
 
@@ -742,6 +744,7 @@ docker push rg.fr-par.scw.cloud/cdiagvet/backend:latest
 **Container DEMO :**
 ```env
 NODE_ENV=staging
+APP_ENV=demo
 DATABASE_URL=postgresql://...demo-db...
 CORS_ORIGIN=https://demo.cdiagvet.fr
 ```
@@ -749,9 +752,34 @@ CORS_ORIGIN=https://demo.cdiagvet.fr
 **Container PROD :**
 ```env
 NODE_ENV=production
+APP_ENV=production
 DATABASE_URL=postgresql://...prod-db...
 CORS_ORIGIN=https://app.cdiagvet.fr
 ```
+
+> ⚠️ **Important : Variable APP_ENV pour le seeding**
+>
+> Le script `prisma db seed` utilise la variable `APP_ENV` pour déterminer quelles données initiales créer :
+>
+> | APP_ENV | Données créées |
+> |---------|----------------|
+> | `dev` (défaut) | Données de test volumineuses (commerciaux, clients, opportunités) |
+> | `demo` | Données de démonstration réalistes (pour présentations clients) |
+> | `production` | Données minimales (admin + catalogue produits uniquement) |
+>
+> **Exemples :**
+> ```bash
+> # DEV (par défaut, pas besoin de préciser)
+> npx prisma db seed
+>
+> # DEMO
+> APP_ENV=demo npx prisma db seed
+>
+> # PROD
+> APP_ENV=production npx prisma db seed
+> ```
+>
+> Si `APP_ENV` n'est pas défini, le seed utilisera le mode **dev** par défaut.
 
 | Avantages | Inconvénients |
 |-----------|---------------|
@@ -780,7 +808,152 @@ CORS_ORIGIN=https://app.cdiagvet.fr
 
 ---
 
-## 8. Troubleshooting
+## 8. Comparaison PaaS vs Serverless
+
+Avant de choisir votre architecture, comprenez les différences fondamentales :
+
+### Définitions
+
+| Modèle | Description | Exemples |
+|--------|-------------|----------|
+| **PaaS** (Platform as a Service) | Conteneur/serveur toujours actif, vous déployez votre code | Railway, Heroku, Render |
+| **Serverless** | Exécution à la demande, le container dort si inactif | Scaleway Containers, AWS Lambda, Vercel Functions |
+| **VPS** (Virtual Private Server) | Serveur virtuel que vous gérez entièrement | OVH VPS, Scaleway DEV1, DigitalOcean Droplet |
+
+### Comparaison détaillée
+
+| Aspect | **PaaS** (Railway) | **Serverless** (Scaleway) | **VPS** (OVH) |
+|--------|-------------------|---------------------------|---------------|
+| **Modèle** | Conteneur toujours actif | Exécution à la demande | Serveur dédié |
+| **Facturation** | Fixe (~$5-20/mois) | À l'usage (CPU/RAM/requêtes) | Fixe (~€7-14/mois) |
+| **Démarrage** | Instantané | Cold start (1-3s) | Instantané |
+| **Scaling** | Manuel ou auto (payant) | Automatique natif | Manuel |
+| **Idle (0 trafic)** | Paie quand même | 0€ | Paie quand même |
+| **Maintenance** | Aucune | Aucune | SSH, updates, sécurité |
+| **Complexité** | ⭐ Simple | ⭐⭐ Moyen | ⭐⭐⭐ Avancé |
+
+### Schéma conceptuel
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              VOUS (Code + Config)                            │
+└──────────────────────────────────────────────────────────────────────────────┘
+          │                         │                         │
+          ▼                         ▼                         ▼
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│      PaaS        │     │    Serverless    │     │       VPS        │
+│ (Railway, Heroku)│     │(Scaleway, Lambda)│     │   (OVH, Scaleway)│
+├──────────────────┤     ├──────────────────┤     ├──────────────────┤
+│ ✅ Toujours ON   │     │ 💤 Dort si idle  │     │ ✅ Toujours ON   │
+│ ✅ Réponse rapide│     │ ⏱️ Cold start    │     │ ✅ Contrôle total│
+│ 💰 Coût fixe     │     │ 💰 Coût variable │     │ 💰 Coût fixe     │
+│ 🔧 Très simple   │     │ 🔧 Config moyenne│     │ 🔧 Maintenance   │
+└──────────────────┘     └──────────────────┘     └──────────────────┘
+```
+
+### Coûts estimés Scaleway Serverless (DEMO)
+
+| Scénario | Requêtes/jour | Coût estimé/mois |
+|----------|---------------|------------------|
+| Aucun trafic (nuit, week-end) | 0 | **0€** |
+| Démos ponctuelles | ~1 000 | **< 1€** |
+| Usage régulier | ~10 000 | **~3-5€** |
+| Usage intensif | ~50 000+ | **~10-15€** |
+
+> ⚠️ **Attention au Cold Start** : Après une période d'inactivité, la première requête prend 1-3 secondes (le container doit démarrer). Cela peut être gênant lors d'une démo client.
+
+---
+
+## 9. Architecture mixte recommandée (DEMO + PROD)
+
+### Option D : Railway (DEMO) + OVH VPS (PROD)
+
+Cette architecture combine le meilleur des deux mondes :
+
+```
+┌─────────────────────────────────────┐     ┌─────────────────────────────────────┐
+│          RAILWAY (DEMO)             │     │          OVH VPS (PROD)             │
+│      (gratuit ou ~$5/mois)          │     │        (DEV1-M ~€14/mois)           │
+│                                     │     │                                     │
+│   Backend  → Railway container      │     │   docker-compose.prod.yml           │
+│   Frontend → Railway container      │     │   .env.prod                         │
+│   PostgreSQL → Railway plugin       │     │   PostgreSQL + PgBouncer            │
+│   Redis    → Railway plugin         │     │   Redis                             │
+│                                     │     │                                     │
+│   ✅ Déploiement auto (git push)    │     │   ✅ Contrôle total                 │
+│   ✅ Pas de maintenance             │     │   ✅ Backups maîtrisés              │
+│   ✅ Idéal pour itérations rapides  │     │   ✅ Performances garanties         │
+└─────────────────────────────────────┘     └─────────────────────────────────────┘
+              │                                           │
+              ▼                                           ▼
+        demo.cdiagvet.fr                            app.cdiagvet.fr
+        demo-api.cdiagvet.fr                        api.cdiagvet.fr
+```
+
+### Avantages de cette approche
+
+| Aspect | Bénéfice |
+|--------|----------|
+| **Coût DEMO** | Gratuit (tier Railway) ou ~$5/mois |
+| **Rapidité DEMO** | Déploiement automatique à chaque `git push` |
+| **Contrôle PROD** | Maîtrise totale : backups, sécurité, logs |
+| **Isolation** | Zéro risque d'impact entre DEMO et PROD |
+| **Évolutivité** | Facile de migrer DEMO vers VPS si besoin |
+
+### Configuration DNS Cloudflare (architecture mixte)
+
+| Environnement | Type | Nom | Contenu | Proxy |
+|---------------|------|-----|---------|-------|
+| DEMO Frontend | CNAME | `demo` | `xxx.up.railway.app` | ✅ |
+| DEMO API | CNAME | `demo-api` | `yyy.up.railway.app` | ✅ |
+| PROD Frontend | A | `app` | `IP_VPS_OVH` | ✅ |
+| PROD API | A | `api` | `IP_VPS_OVH` | ✅ |
+
+### Variables d'environnement par plateforme
+
+**Railway (DEMO) - via Dashboard :**
+```env
+NODE_ENV=staging
+APP_ENV=demo
+DATABASE_URL=postgresql://...(fourni par Railway)...
+REDIS_URL=redis://...(fourni par Railway)...
+CORS_ORIGIN=https://demo.cdiagvet.fr
+VITE_API_URL=https://demo-api.cdiagvet.fr/graphql
+JWT_SECRET=<générer avec: openssl rand -base64 32>
+```
+
+**OVH VPS (PROD) - fichier .env.prod :**
+```env
+NODE_ENV=production
+APP_ENV=production
+DATABASE_URL=postgresql://cdiagvet:xxx@localhost:6432/cdiagvet_prod
+REDIS_URL=redis://localhost:6379
+CORS_ORIGIN=https://app.cdiagvet.fr
+VITE_API_URL=https://api.cdiagvet.fr/graphql
+JWT_SECRET=<générer avec: openssl rand -base64 32>
+```
+
+### Tableau récapitulatif : Quelle solution choisir ?
+
+| Critère | Railway (PaaS) | Scaleway Serverless | OVH VPS |
+|---------|----------------|---------------------|---------|
+| **Budget serré** | ⭐⭐ | ⭐⭐⭐ (0€ si idle) | ⭐⭐ |
+| **Simplicité** | ⭐⭐⭐ | ⭐⭐ | ⭐ |
+| **Performance** | ⭐⭐⭐ | ⭐⭐ (cold start) | ⭐⭐⭐ |
+| **Contrôle** | ⭐ | ⭐ | ⭐⭐⭐ |
+| **Pour DEMO** | ✅ Recommandé | ✅ Si budget critique | ⚠️ Overkill |
+| **Pour PROD** | ⚠️ Limité | ⚠️ Cold start gênant | ✅ Recommandé |
+
+### Recommandation finale
+
+| Environnement | Solution recommandée | Pourquoi |
+|---------------|---------------------|----------|
+| **DEMO** | **Railway** | Simple, déploiement auto, gratuit/pas cher |
+| **PROD** | **OVH VPS** | Contrôle total, coût fixe, performances |
+
+---
+
+## 10. Troubleshooting
 
 ### Problème : Container ne démarre pas
 

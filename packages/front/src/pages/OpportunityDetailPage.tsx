@@ -17,6 +17,7 @@ import { CONVERT_OPPORTUNITY_TO_ORDER } from '../graphql/orders';
 import { PRODUCTS_QUERY, PRODUCT_KITS_QUERY } from '../graphql/products';
 import { useRecoilValue } from 'recoil';
 import { authState } from '../state/auth';
+import OpportunityTimeline from '../components/OpportunityTimeline';
 import './OpportunityDetailPage.css';
 
 interface Opportunity {
@@ -682,6 +683,10 @@ export default function OpportunityDetailPage() {
             {opportunity.lostComment && <p>{opportunity.lostComment}</p>}
           </section>
         )}
+
+        <section className="timeline-section">
+          <OpportunityTimeline opportunityId={opportunity.id} />
+        </section>
 
         <section className="meta-section">
           <p>Créée le {formatDate(opportunity.createdAt)}</p>

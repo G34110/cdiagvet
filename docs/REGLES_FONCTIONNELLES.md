@@ -486,6 +486,71 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 | CT6.8.4 | Tenter de convertir une opportunité sans produit | Message d'erreur, conversion bloquée |
 | CT6.8.5 | Tenter de convertir une opportunité déjà convertie | Message d'erreur, action bloquée |
 
+### R6.9 - Historique & Timeline d'opportunité
+**Description:** Chaque opportunité dispose d'un historique complet sous forme de timeline chronologique permettant de suivre toutes les actions effectuées.
+
+| Type d'événement | Description |
+|------------------|-------------|
+| **Création** | Création de l'opportunité |
+| **Changement de statut** | Passage d'un statut à un autre (avec ancienne et nouvelle valeur) |
+| **Modification du montant** | Changement du montant estimé |
+| **Changement de propriétaire** | Réassignation à un autre commercial |
+| **Note ajoutée** | Ajout d'une note par un utilisateur |
+| **Ligne ajoutée/modifiée/supprimée** | Actions sur les lignes produits |
+| **Document attaché** | Pièce jointe ajoutée (future) |
+| **RDV planifié** | Rendez-vous lié à l'opportunité (future) |
+
+| Règle | Description |
+|-------|-------------|
+| **Tri** | Les événements sont triés du plus récent au plus ancien |
+| **Filtrage** | L'utilisateur peut filtrer par type d'événement |
+| **Ajout de note** | Un champ permet d'ajouter une note directement depuis la timeline |
+| **Auteur** | Chaque événement affiche l'utilisateur qui l'a déclenché |
+| **Date relative** | La date est affichée en format relatif ("il y a 2h", "hier") avec date complète au survol |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.9.1 | Ouvrir la fiche détail d'une opportunité | La section "Historique" affiche la timeline des événements |
+| CT6.9.2 | Vérifier l'ordre des événements | Les événements sont triés du plus récent au plus ancien |
+| CT6.9.3 | Créer une nouvelle opportunité puis consulter son historique | L'événement "Création" est visible avec date et auteur |
+| CT6.9.4 | Changer le statut d'une opportunité | Un événement "Changement de statut" apparaît avec ancienne → nouvelle valeur |
+| CT6.9.5 | Réassigner l'opportunité à un autre commercial | Un événement "Changement de propriétaire" apparaît avec les noms des commerciaux |
+| CT6.9.6 | Saisir une note dans le champ de la timeline et cliquer "Ajouter" | La note est ajoutée et visible dans la timeline |
+| CT6.9.7 | Cliquer sur le bouton filtre puis sélectionner "Notes" | Seules les notes sont affichées |
+| CT6.9.8 | Cliquer sur le bouton filtre puis sélectionner "Changement de statut" | Seuls les événements de changement de statut sont affichés |
+| CT6.9.9 | Survoler la date d'un événement | La date complète s'affiche en infobulle |
+
+### R6.10 - Motif de perte obligatoire
+**Description:** Lors du passage d'une opportunité au statut "Perdu", l'utilisateur doit obligatoirement indiquer un motif de perte pour alimenter l'analyse commerciale.
+
+| Motif disponible | Description |
+|------------------|-------------|
+| **Prix trop élevé** | Le client a trouvé l'offre trop chère |
+| **Concurrent sélectionné** | Un concurrent a remporté l'affaire (avec champ pour nom du concurrent) |
+| **Timing / Budget reporté** | Le projet est reporté à une date ultérieure |
+| **Besoin annulé par le client** | Le client a abandonné son projet |
+| **Pas de réponse du client** | Impossible de joindre le client |
+| **Autre** | Motif personnalisé (commentaire obligatoire) |
+
+| Règle | Description |
+|-------|-------------|
+| **Modal obligatoire** | Une modal s'affiche lors du drag-and-drop vers "Perdu" |
+| **Motif requis** | L'utilisateur doit sélectionner un motif avant de valider |
+| **Commentaire conditionnel** | Le commentaire est obligatoire si motif = "Autre" |
+| **Concurrent** | Si motif = "Concurrent sélectionné", un champ pour le nom du concurrent s'affiche |
+| **Annulation possible** | L'utilisateur peut annuler et l'opportunité reste dans son statut actuel |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT6.10.1 | Glisser une opportunité vers la zone "Perdu" | Une modal "Marquer comme perdue" s'affiche |
+| CT6.10.2 | Cliquer sur "Marquer comme perdue" sans sélectionner de motif | Le bouton est désactivé |
+| CT6.10.3 | Sélectionner "Prix trop élevé" et valider | L'opportunité passe en "Perdu" avec le motif enregistré |
+| CT6.10.4 | Sélectionner "Concurrent sélectionné" | Un champ "Nom du concurrent" apparaît |
+| CT6.10.5 | Sélectionner "Autre" sans commentaire et valider | Le bouton reste désactivé (commentaire obligatoire) |
+| CT6.10.6 | Sélectionner "Autre" avec commentaire et valider | L'opportunité passe en "Perdu" avec le commentaire |
+| CT6.10.7 | Cliquer sur "Annuler" dans la modal | La modal se ferme, l'opportunité reste dans son statut actuel |
+| CT6.10.8 | Consulter une opportunité perdue | Le motif de perte et le commentaire sont affichés |
+
 ---
 
 ## 8. Pipeline Commandes

@@ -243,6 +243,16 @@
   color: var(--text-secondary);
 }
 
+.lost-reason {
+  padding: 0.125rem 0.5rem;
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .lost-amount {
   color: #dc2626;
 }

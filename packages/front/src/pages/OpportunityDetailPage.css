@@ -542,3 +542,7 @@
   border-radius: 0.25rem;
   text-align: right;
 }
+
+.timeline-section {
+  margin-top: 1.5rem;
+}
