@@ -3,9 +3,17 @@ import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { OpportunitiesService } from './opportunities.service';
-import { Opportunity, CommercialUser } from './entities/opportunity.entity';
+import { 
+  Opportunity, 
+  CommercialUser, 
+  OpportunityTimeline, 
+  OpportunityNote,
+  OpportunityEvent,
+  OpportunityEventType,
+} from './entities/opportunity.entity';
 import { CreateOpportunityInput } from './dto/create-opportunity.input';
 import { UpdateOpportunityInput } from './dto/update-opportunity.input';
+import { AddOpportunityNoteInput } from './dto/add-opportunity-note.input';
 import { Order } from '../orders/entities/order.entity';
 
 interface CurrentUserPayload {
@@ -251,6 +259,72 @@ export class OpportunitiesResolver {
         filiereIds: user.filiereIds,
       },
       opportunityId,
+    );
+  }
+
+  // ============================================
+  // TIMELINE & HISTORIQUE (Story 9.6)
+  // ============================================
+
+  @Query(() => OpportunityTimeline, { name: 'opportunityTimeline' })
+  async getTimeline(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('opportunityId') opportunityId: string,
+  ) {
+    return this.opportunitiesService.getTimeline(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      opportunityId,
+    );
+  }
+
+  @Query(() => [OpportunityEvent], { name: 'opportunityEvents' })
+  async getEvents(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('opportunityId') opportunityId: string,
+    @Args('types', { type: () => [OpportunityEventType], nullable: true }) types?: OpportunityEventType[],
+  ) {
+    if (types && types.length > 0) {
+      return this.opportunitiesService.getEventsByType(
+        {
+          tenantId: user.tenantId,
+          userId: user.id,
+          role: user.role,
+          filiereIds: user.filiereIds,
+        },
+        opportunityId,
+        types,
+      );
+    }
+    const timeline = await this.opportunitiesService.getTimeline(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      opportunityId,
+    );
+    return timeline.events;
+  }
+
+  @Mutation(() => OpportunityNote, { description: 'Ajoute une note à l\'opportunité' })
+  async addOpportunityNote(
+    @CurrentUser() user: CurrentUserPayload,
+    @Args('input') input: AddOpportunityNoteInput,
+  ) {
+    return this.opportunitiesService.addNote(
+      {
+        tenantId: user.tenantId,
+        userId: user.id,
+        role: user.role,
+        filiereIds: user.filiereIds,
+      },
+      input,
     );
   }
 }

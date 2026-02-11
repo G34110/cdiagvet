@@ -50,6 +50,8 @@ model User {
   auditLogs    AuditLog[]
   opportunities Opportunity[] @relation("OpportunityOwner")
   orders       Order[] @relation("OrderOwner")
+  opportunityNotes OpportunityNote[] @relation("OpportunityNoteAuthor")
+  opportunityEvents OpportunityEvent[] @relation("OpportunityEventUser")
 
   @@map("users")
 }
@@ -406,6 +408,8 @@ model Opportunity {
 
   lines           OpportunityLine[]
   orders          Order[]
+  historyNotes    OpportunityNote[]
+  events          OpportunityEvent[]
 
   @@index([status])
   @@index([ownerId])
@@ -449,6 +453,60 @@ enum OpportunitySource {
   RECOMMANDATION
   SITE_WEB
   AUTRE
+}
+
+// ============================================
+// OPPORTUNITÉS - HISTORIQUE & TIMELINE (Story 9.6)
+// ============================================
+
+model OpportunityNote {
+  id            String      @id @default(uuid())
+  content       String
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  opportunityId String      @map("opportunity_id")
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  authorId      String      @map("author_id")
+  author        User        @relation("OpportunityNoteAuthor", fields: [authorId], references: [id])
+
+  @@index([opportunityId])
+  @@index([createdAt])
+  @@map("opportunity_notes")
+}
+
+model OpportunityEvent {
+  id            String              @id @default(uuid())
+  type          OpportunityEventType
+  description   String?
+  metadata      Json?
+  createdAt     DateTime            @default(now()) @map("created_at")
+
+  opportunityId String              @map("opportunity_id")
+  opportunity   Opportunity         @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  userId        String?             @map("user_id")
+  user          User?               @relation("OpportunityEventUser", fields: [userId], references: [id])
+
+  @@index([opportunityId])
+  @@index([createdAt])
+  @@index([type])
+  @@map("opportunity_events")
+}
+
+enum OpportunityEventType {
+  STATUS_CHANGE
+  NOTE_ADDED
+  OWNER_CHANGE
+  AMOUNT_CHANGE
+  LINE_ADDED
+  LINE_REMOVED
+  LINE_UPDATED
+  DOCUMENT_ATTACHED
+  RDV_SCHEDULED
+  EMAIL_SENT
+  CREATED
 }
 
 // ============================================

@@ -2,6 +2,11 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AddOpportunityNoteInput {
+  content: String!
+  opportunityId: ID!
+}
+
 input AssociateLotClientInput {
   clientId: String!
   deliveryDate: DateTime
@@ -248,6 +253,9 @@ type LotTraceability {
 
 type Mutation {
   addKitToOpportunity(kitId: String!, opportunityId: String!, quantity: Int! = 1): Opportunity!
+
+  """Ajoute une note à l'opportunité"""
+  addOpportunityNote(input: AddOpportunityNoteInput!): OpportunityNote!
   addOrderLine(line: CreateOrderLineInput!, orderId: String!): Order!
   addProductToOpportunity(opportunityId: String!, productId: String!, quantity: Int! = 1): Opportunity!
   assignOpportunity(newOwnerId: String!, opportunityId: String!): Opportunity!
@@ -336,6 +344,35 @@ type OpportunityClient {
   organization: String
 }
 
+type OpportunityEvent {
+  createdAt: DateTime!
+  description: String
+  id: ID!
+  metadata: String
+  type: OpportunityEventType!
+  user: OpportunityEventUser
+}
+
+enum OpportunityEventType {
+  AMOUNT_CHANGE
+  CREATED
+  DOCUMENT_ATTACHED
+  EMAIL_SENT
+  LINE_ADDED
+  LINE_REMOVED
+  LINE_UPDATED
+  NOTE_ADDED
+  OWNER_CHANGE
+  RDV_SCHEDULED
+  STATUS_CHANGE
+}
+
+type OpportunityEventUser {
+  firstName: String!
+  id: ID!
+  lastName: String!
+}
+
 type OpportunityLine {
   id: ID!
   kitId: String
@@ -344,6 +381,14 @@ type OpportunityLine {
   quantity: Int!
   total: Float!
   unitPrice: Float!
+}
+
+type OpportunityNote {
+  author: OpportunityEventUser!
+  content: String!
+  createdAt: DateTime!
+  id: ID!
+  updatedAt: DateTime!
 }
 
 type OpportunityOwner {
@@ -369,6 +414,11 @@ enum OpportunityStatus {
   PERDU
   PROPOSITION
   QUALIFICATION
+}
+
+type OpportunityTimeline {
+  events: [OpportunityEvent!]!
+  notes: [OpportunityNote!]!
 }
 
 type Order {
@@ -488,6 +538,8 @@ type Query {
   opportunities: [Opportunity!]!
   opportunitiesByStatus(status: String!): [Opportunity!]!
   opportunity(id: String!): Opportunity!
+  opportunityEvents(opportunityId: String!, types: [OpportunityEventType!]): [OpportunityEvent!]!
+  opportunityTimeline(opportunityId: String!): OpportunityTimeline!
   order(id: String!): Order!
   orders: [Order!]!
   ordersByStatus(status: OrderStatus!): [Order!]!

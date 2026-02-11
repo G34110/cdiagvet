@@ -2,7 +2,9 @@ import { Injectable, ForbiddenException, NotFoundException, BadRequestException,
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateOpportunityInput } from './dto/create-opportunity.input';
 import { UpdateOpportunityInput } from './dto/update-opportunity.input';
+import { AddOpportunityNoteInput } from './dto/add-opportunity-note.input';
 import { OrdersService } from '../orders/orders.service';
+import { OpportunityEventType } from './entities/opportunity.entity';
 
 interface OpportunityContext {
   tenantId: string;
@@ -233,6 +235,10 @@ export class OpportunitiesService {
       },
     });
 
+    // Create CREATED event
+    await this.createEvent(opportunity.id, OpportunityEventType.CREATED, ctx.userId,
+      `Opportunité créée: ${input.title}`);
+
     return {
       ...opportunity,
       weightedAmount: opportunity.amount * (opportunity.probability / 100),
@@ -295,6 +301,19 @@ export class OpportunitiesService {
       where: { id: input.id },
       data: updateData,
     });
+
+    // Create events for tracked changes
+    if (input.status !== undefined && input.status !== existing.status) {
+      await this.createEvent(input.id, OpportunityEventType.STATUS_CHANGE, ctx.userId,
+        `Statut: ${existing.status} → ${input.status}`,
+        { oldStatus: existing.status, newStatus: input.status });
+    }
+
+    if (input.amount !== undefined && input.amount !== existing.amount) {
+      await this.createEvent(input.id, OpportunityEventType.AMOUNT_CHANGE, ctx.userId,
+        `Montant: ${existing.amount}€ → ${input.amount}€`,
+        { oldAmount: existing.amount, newAmount: input.amount });
+    }
 
     // If manualAmount was updated, recalculate total amount
     if (input.manualAmount !== undefined) {
@@ -388,6 +407,12 @@ export class OpportunitiesService {
       throw new ForbiddenException('Commercial non trouvé ou non autorisé');
     }
 
+    // Get previous owner info for event
+    const previousOwner = await this.prisma.user.findUnique({
+      where: { id: opportunity.ownerId },
+      select: { firstName: true, lastName: true },
+    });
+
     // Update the opportunity with new owner
     const updated = await this.prisma.opportunity.update({
       where: { id: opportunityId },
@@ -402,6 +427,11 @@ export class OpportunitiesService {
         lines: { orderBy: { createdAt: 'asc' } },
       },
     });
+
+    // Create OWNER_CHANGE event
+    await this.createEvent(opportunityId, OpportunityEventType.OWNER_CHANGE, ctx.userId,
+      `Propriétaire: ${previousOwner?.firstName} ${previousOwner?.lastName} → ${newOwner.firstName} ${newOwner.lastName}`,
+      { previousOwnerId: opportunity.ownerId, newOwnerId });
 
     return {
       ...updated,
@@ -673,5 +703,88 @@ export class OpportunitiesService {
     });
 
     return order;
+  }
+
+  // ============================================
+  // TIMELINE & HISTORIQUE (Story 9.6)
+  // ============================================
+
+  async getTimeline(ctx: OpportunityContext, opportunityId: string) {
+    // Verify access
+    await this.findOne(ctx, opportunityId);
+
+    const [events, notes] = await Promise.all([
+      this.prisma.opportunityEvent.findMany({
+        where: { opportunityId },
+        include: { user: { select: { id: true, firstName: true, lastName: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.opportunityNote.findMany({
+        where: { opportunityId },
+        include: { author: { select: { id: true, firstName: true, lastName: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return {
+      events: events.map(e => ({
+        ...e,
+        metadata: e.metadata ? JSON.stringify(e.metadata) : null,
+      })),
+      notes,
+    };
+  }
+
+  async addNote(ctx: OpportunityContext, input: AddOpportunityNoteInput) {
+    // Verify access
+    await this.findOne(ctx, input.opportunityId);
+
+    // Create note (no event needed, notes are displayed directly in timeline)
+    const note = await this.prisma.opportunityNote.create({
+      data: {
+        content: input.content,
+        opportunityId: input.opportunityId,
+        authorId: ctx.userId,
+      },
+      include: { author: { select: { id: true, firstName: true, lastName: true } } },
+    });
+
+    return note;
+  }
+
+  async createEvent(
+    opportunityId: string,
+    type: OpportunityEventType,
+    userId: string | null,
+    description?: string,
+    metadata?: Record<string, any>,
+  ) {
+    return this.prisma.opportunityEvent.create({
+      data: {
+        opportunityId,
+        type,
+        userId,
+        description,
+        metadata: metadata || undefined,
+      },
+    });
+  }
+
+  async getEventsByType(ctx: OpportunityContext, opportunityId: string, types: OpportunityEventType[]) {
+    await this.findOne(ctx, opportunityId);
+
+    const events = await this.prisma.opportunityEvent.findMany({
+      where: {
+        opportunityId,
+        type: { in: types },
+      },
+      include: { user: { select: { id: true, firstName: true, lastName: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return events.map(e => ({
+      ...e,
+      metadata: e.metadata ? JSON.stringify(e.metadata) : null,
+    }));
   }
 }
