@@ -7,6 +7,7 @@ interface User {
   lastName: string;
   role: string;
   clientId?: string;
+  mustChangePassword?: boolean;
 }
 
 interface AuthState {

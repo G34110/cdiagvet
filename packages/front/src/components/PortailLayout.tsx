@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
 import { authState } from '../state/auth';
@@ -17,6 +18,13 @@ export default function PortailLayout() {
   const cart = useRecoilValue(cartState);
   const navigate = useNavigate();
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Redirect to change password page if mustChangePassword is true
+  useEffect(() => {
+    if (auth.user?.mustChangePassword) {
+      navigate('/change-password');
+    }
+  }, [auth.user?.mustChangePassword, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');

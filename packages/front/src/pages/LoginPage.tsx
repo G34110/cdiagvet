@@ -15,6 +15,7 @@ const LOGIN_MUTATION = gql`
         lastName
         role
         clientId
+        mustChangePassword
       }
     }
   }
@@ -33,6 +34,13 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
       setAuth({ isAuthenticated: true, user, accessToken });
+      
+      // Check if user must change password first
+      if (user.mustChangePassword) {
+        navigate('/change-password');
+        return;
+      }
+      
       // Redirect distributors to portal, others to dashboard
       if (user.role === 'DISTRIBUTEUR') {
         navigate('/portail');

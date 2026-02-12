@@ -205,23 +205,6 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
 
       <div className="form-row">
         <div className="form-group">
-          <label htmlFor="country">Pays *</label>
-          <select
-            id="country"
-            name="country"
-            value={form.country}
-            onChange={handleCountryChange}
-            required
-          >
-            {countries.map(c => (
-              <option key={c.code} value={c.code}>{c.name}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group" style={{ flex: 2 }}>
           <label htmlFor="addressLine1">{countryConfig.labels.addressLine1}</label>
           <input
             type="text"
@@ -232,10 +215,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
             placeholder={countryConfig.labels.addressLine1}
           />
         </div>
-      </div>
-
-      <div className="form-row">
-        <div className="form-group" style={{ flex: 2 }}>
+        <div className="form-group">
           <label htmlFor="addressLine2">{countryConfig.labels.addressLine2}</label>
           <input
             type="text"
@@ -248,7 +228,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
         </div>
       </div>
 
-      <div className="form-row">
+      <div className="form-row three-cols">
         <div className="form-group">
           <label htmlFor="postalCode">
             {countryConfig.labels.postalCode}
@@ -275,6 +255,20 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
             onChange={handleChange}
             placeholder={countryConfig.labels.city}
           />
+        </div>
+        <div className="form-group">
+          <label htmlFor="country">Pays *</label>
+          <select
+            id="country"
+            name="country"
+            value={form.country}
+            onChange={handleCountryChange}
+            required
+          >
+            {countries.map(c => (
+              <option key={c.code} value={c.code}>{c.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 

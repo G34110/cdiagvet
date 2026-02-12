@@ -19,6 +19,9 @@ export class UserPayload {
 
   @Field({ nullable: true })
   clientId?: string;
+
+  @Field()
+  mustChangePassword: boolean;
 }
 
 @ObjectType()

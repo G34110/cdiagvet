@@ -179,11 +179,11 @@ export default function PortailPanier() {
           <div className="cart-summary">
             <h3>Récapitulatif</h3>
             <div className="summary-row">
-              <span>Sous-total HT</span>
+              <span>Sous-total HT </span>
               <span>{formatCurrency(totalHT)}</span>
             </div>
             <div className="summary-row">
-              <span>TVA (20%)</span>
+              <span>TVA (20%) </span>
               <span>{formatCurrency(tva)}</span>
             </div>
             <div className="summary-row total">

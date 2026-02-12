@@ -39,6 +39,10 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
+  passwordResetToken   String?   @map("password_reset_token")
+  passwordResetExpires DateTime? @map("password_reset_expires")
+  mustChangePassword   Boolean   @default(false) @map("must_change_password")
+
   tenantId     String   @map("tenant_id")
   tenant       Tenant   @relation(fields: [tenantId], references: [id])
 

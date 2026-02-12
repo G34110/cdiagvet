@@ -23,6 +23,8 @@ import PortailCatalogue from './pages/portail/PortailCatalogue';
 import PortailPanier from './pages/portail/PortailPanier';
 import PortailCommandes from './pages/portail/PortailCommandes';
 import PortailCompte from './pages/portail/PortailCompte';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const auth = useRecoilValue(authState);
@@ -41,6 +43,8 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/change-password" element={<ForceChangePasswordPage />} />
       <Route
         path="/"
         element={

@@ -4,6 +4,7 @@ import { GeocodingService } from '../../common/services/geocoding.service';
 import { CreateClientInput } from './dto/create-client.input';
 import { UpdateClientInput } from './dto/update-client.input';
 import { ClientsFilterInput } from './dto/clients-filter.input';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ClientsService {
@@ -45,7 +46,44 @@ export class ClientsService {
       },
     });
 
+    // Auto-create portal account for DISTRIBUTEUR or AGENT clients with email
+    if ((input.segmentation === 'DISTRIBUTEUR' || input.segmentation === 'AGENT') && input.email) {
+      await this.createPortalAccount(client.id, input.email, input.name, tenantId);
+    }
+
     return this.transformClientFilieres(client);
+  }
+
+  private async createPortalAccount(clientId: string, email: string, clientName: string, tenantId: string) {
+    const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    
+    if (existingUser) {
+      this.logger.log(`Portal account already exists for ${email}`);
+      return;
+    }
+
+    const nameParts = clientName.split(' ');
+    const firstName = nameParts[0] || 'Client';
+    const lastName = nameParts.slice(1).join(' ') || 'Portail';
+
+    // DEV/DEMO: Create account with password "client123" and require password change
+    const hashedPassword = await bcrypt.hash('client123', 10);
+    
+    await this.prisma.user.create({
+      data: {
+        email,
+        passwordHash: hashedPassword,
+        firstName,
+        lastName,
+        role: 'DISTRIBUTEUR',
+        isActive: true,
+        tenantId,
+        clientId,
+        mustChangePassword: true,
+      },
+    });
+    
+    this.logger.log(`Portal account created for ${email} (password=client123, must change on first login)`);
   }
 
   private transformClientFilieres(client: any) {

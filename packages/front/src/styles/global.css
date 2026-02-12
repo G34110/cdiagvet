@@ -570,9 +570,10 @@ body {
 
 /* Client Form */
 .client-form {
-  max-width: 600px;
+  max-width: 900px;
+  width: 100%;
   background: var(--bg-card);
-  padding: 1.5rem;
+  padding: 2rem;
   border-radius: 0.75rem;
   border: 1px solid var(--border);
 }
@@ -580,7 +581,12 @@ body {
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  gap: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-row.three-cols {
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .form-actions {
@@ -608,7 +614,8 @@ body {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .form-row {
+  .form-row,
+  .form-row.three-cols {
     grid-template-columns: 1fr;
   }
   
