@@ -16,6 +16,9 @@ export class UserPayload {
 
   @Field()
   role: string;
+
+  @Field({ nullable: true })
+  clientId?: string;
 }
 
 @ObjectType()

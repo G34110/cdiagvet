@@ -688,12 +688,14 @@ export class OpportunitiesService {
       kitId: line.kitId || undefined,
     }));
 
-    // Create order from opportunity
+    // Create order from opportunity (include manualAmount)
+    const manualAmount = Number(opportunity.manualAmount) || 0;
     const order = await this.ordersService.createFromOpportunity(
       { userId: ctx.userId, tenantId: ctx.tenantId, role: ctx.role },
       opportunityId,
       orderLines,
       opportunity.clientId,
+      manualAmount,
     );
 
     // Update opportunity status to CONVERTI

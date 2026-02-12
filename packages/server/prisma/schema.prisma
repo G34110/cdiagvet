@@ -42,6 +42,9 @@ model User {
   tenantId     String   @map("tenant_id")
   tenant       Tenant   @relation(fields: [tenantId], references: [id])
 
+  clientId     String?  @map("client_id")
+  client       Client?  @relation("DistributeurClient", fields: [clientId], references: [id])
+
   filieres     UserFiliere[] @relation("UserFilieres")
 
   clients      Client[] @relation("CommercialClients")
@@ -62,6 +65,12 @@ enum Role {
   COMMERCIAL
   QUALITE
   DISTRIBUTEUR
+}
+
+enum ClientSegmentation {
+  DISTRIBUTEUR
+  AGENT
+  AUTRES
 }
 
 // ============================================
@@ -127,6 +136,8 @@ model Client {
   latitude      Float?
   longitude     Float?
   isActive      Boolean  @default(true) @map("is_active")
+  portailEnabled Boolean @default(false) @map("portail_enabled")
+  segmentation  ClientSegmentation @default(AUTRES)
   deletedAt     DateTime? @map("deleted_at")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -144,6 +155,7 @@ model Client {
   lots          LotClient[]
   orders        Order[]
   opportunities Opportunity[]
+  distributeurs User[] @relation("DistributeurClient")
 
   @@map("clients")
 }
@@ -273,6 +285,7 @@ model Order {
   totalHT           Float       @default(0) @map("total_ht")
   totalTTC          Float       @default(0) @map("total_ttc")
   taxRate           Float       @default(20) @map("tax_rate")
+  manualAmount      Float       @default(0) @map("manual_amount")
   expectedDelivery  DateTime?   @map("expected_delivery")
   deliveredAt       DateTime?   @map("delivered_at")
   trackingNumber    String?     @map("tracking_number")

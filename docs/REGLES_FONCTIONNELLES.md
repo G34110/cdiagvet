@@ -654,6 +654,124 @@ Document de référence des règles métier de l'application CDiagVet, avec les 
 
 ---
 
+## 9. Portail Distributeur (v2)
+
+### R9.1 - Accès au Portail Distributeur
+**Description:** Les clients (distributeurs) peuvent accéder à un portail self-service pour consulter le catalogue et passer des commandes. L'accès est contrôlé par l'Admin au niveau de chaque client.
+
+| Règle | Description |
+|-------|-------------|
+| **Activation par client** | L'Admin peut activer/désactiver l'accès au portail pour chaque client via le champ `portailEnabled` |
+| **Rôle Distributeur** | Un utilisateur avec le rôle DISTRIBUTEUR est redirigé automatiquement vers `/portail` |
+| **Interface dédiée** | Le portail a un layout simplifié, orienté client (pas d'accès aux fonctionnalités internes) |
+| **Authentification partagée** | Même système de connexion que l'application principale |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT9.1.1 | Se connecter en tant que Distributeur avec portailEnabled=true | Redirection vers /portail |
+| CT9.1.2 | Se connecter en tant que Distributeur avec portailEnabled=false | Message "Portail indisponible" |
+| CT9.1.3 | En tant qu'Admin, activer le portail pour un client | Le champ portailEnabled passe à true |
+| CT9.1.4 | Accéder à /portail sans être Distributeur | Redirection vers /dashboard |
+
+### R9.2 - Catalogue produits (Story 8.7)
+**Description:** Les distributeurs peuvent consulter le catalogue des produits et kits disponibles avec leurs prix.
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Liste produits** | Affichage en grille avec image, code, nom, description, prix HT |
+| **Liste kits** | Affichage des kits avec nombre de produits inclus |
+| **Recherche** | Recherche par nom ou code produit |
+| **Filtres** | Filtre par catégorie (filière) |
+| **Disponibilité** | Indicateur de stock (à implémenter) |
+| **Ajout au panier** | Bouton pour ajouter un produit/kit au panier |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT9.2.1 | Accéder au catalogue | Liste des produits actifs affichée |
+| CT9.2.2 | Rechercher "test" | Seuls les produits contenant "test" sont affichés |
+| CT9.2.3 | Filtrer par catégorie "Bovine" | Seuls les produits de la filière Bovine sont affichés |
+| CT9.2.4 | Cliquer sur "Kits" | Affichage de la liste des kits |
+| CT9.2.5 | Cliquer sur "Ajouter" sur un produit | Le produit est ajouté au panier |
+| CT9.2.6 | Ajouter 2 fois le même produit | La quantité dans le panier passe à 2 |
+
+### R9.3 - Panier et commande self-service (Story 8.8)
+**Description:** Les distributeurs peuvent gérer leur panier et passer des commandes en autonomie.
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Panier persistant** | Le panier est sauvegardé localement (localStorage) |
+| **Gestion quantités** | Boutons +/- pour ajuster les quantités |
+| **Suppression** | Supprimer un article ou vider le panier |
+| **Récapitulatif** | Affichage sous-total HT, TVA 20%, total TTC |
+| **Validation** | Création d'une commande en statut Brouillon |
+| **Confirmation** | Écran de succès avec numéro de commande |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT9.3.1 | Accéder au panier vide | Message "Votre panier est vide" avec lien catalogue |
+| CT9.3.2 | Augmenter la quantité d'un article | Le total se met à jour |
+| CT9.3.3 | Diminuer la quantité à 0 | La quantité reste à 1 minimum |
+| CT9.3.4 | Cliquer sur l'icône poubelle | L'article est supprimé du panier |
+| CT9.3.5 | Cliquer sur "Vider le panier" | Tous les articles sont supprimés |
+| CT9.3.6 | Cliquer sur "Valider ma commande" | Une commande est créée, écran de succès affiché |
+| CT9.3.7 | Fermer et rouvrir le navigateur | Le panier est conservé |
+
+### R9.4 - Suivi commandes (Story 8.9)
+**Description:** Les distributeurs peuvent consulter l'historique et le statut de leurs commandes.
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Liste commandes** | Affichage de toutes les commandes avec statut |
+| **Recherche** | Filtrage par référence de commande |
+| **Filtre statut** | Brouillon, Validée, En préparation, Expédiée, Livrée, Annulée |
+| **Détail commande** | Modal avec articles, prix et informations de livraison |
+| **Suivi livraison** | Affichage du numéro de suivi et date prévue |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT9.4.1 | Accéder à "Mes commandes" | Liste des commandes affichée |
+| CT9.4.2 | Rechercher une référence | Seules les commandes correspondantes affichées |
+| CT9.4.3 | Filtrer par statut "Expédiée" | Seules les commandes expédiées affichées |
+| CT9.4.4 | Cliquer sur "Voir le détail" | Modal avec détails de la commande |
+| CT9.4.5 | Commande avec numéro de suivi | Le numéro de suivi est affiché |
+| CT9.4.6 | Commande livrée | La date de livraison est affichée |
+
+### R9.5 - Dashboard distributeur (Story 8.11)
+**Description:** Tableau de bord avec statistiques et accès rapide aux fonctionnalités.
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Statistiques** | Nombre de commandes, en cours, livrées, volume d'achats |
+| **Actions rapides** | Liens vers Catalogue, Panier, Mes commandes |
+| **Dernières commandes** | Aperçu des 3 dernières commandes |
+| **Personnalisation** | Message d'accueil avec le prénom |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT9.5.1 | Accéder au dashboard | Statistiques et actions rapides affichées |
+| CT9.5.2 | Cliquer sur "Catalogue" | Redirection vers le catalogue |
+| CT9.5.3 | Avoir des commandes | Les dernières commandes sont affichées |
+
+### R9.6 - Gestion compte distributeur (Story 8.12)
+**Description:** Les distributeurs peuvent gérer leurs informations personnelles et mot de passe.
+
+| Fonctionnalité | Description |
+|----------------|-------------|
+| **Informations personnelles** | Nom, prénom, téléphone |
+| **Adresse de livraison** | Adresse, ville, code postal |
+| **Changement mot de passe** | Modification sécurisée du mot de passe |
+| **Onglets** | Navigation entre informations et mot de passe |
+
+| Cas de test | Actions | Résultat attendu |
+|-------------|---------|------------------|
+| CT9.6.1 | Accéder à "Mon compte" | Formulaire d'informations affiché |
+| CT9.6.2 | Modifier le téléphone | Message de succès affiché |
+| CT9.6.3 | Cliquer sur "Mot de passe" | Formulaire de changement affiché |
+| CT9.6.4 | Saisir des mots de passe différents | Message d'erreur affiché |
+| CT9.6.5 | Changer le mot de passe correctement | Message de succès affiché |
+
+---
+
 ## Annexe : Comptes de test
 
 | Email | Mot de passe | Rôle | Filières |

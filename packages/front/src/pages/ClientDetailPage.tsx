@@ -7,7 +7,7 @@ import ClientForm from '../components/ClientForm';
 import NotesSection from '../components/NotesSection';
 import PhotosSection from '../components/PhotosSection';
 import VisitsSection from '../components/VisitsSection';
-import LotsSection from '../components/LotsSection';
+import ClientOrdersSection from '../components/ClientOrdersSection';
 
 type TabType = 'notes' | 'photos' | 'visits' | 'lots' | 'orders';
 
@@ -108,36 +108,57 @@ export default function ClientDetailPage() {
         </span>
       </div>
 
-      {client.filieres && client.filieres.length > 0 && (
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-          {client.filieres.map((f: { id: string; name: string }) => {
-            const colors: Record<string, { bg: string; border: string; text: string }> = {
-              'Porcine': { bg: '#FFE4E6', border: '#FDA4AF', text: '#BE123C' },
-              'Canine': { bg: '#E0E7FF', border: '#A5B4FC', text: '#4338CA' },
-              'Ovine': { bg: '#D1FAE5', border: '#6EE7B7', text: '#047857' },
-              'Bovine': { bg: '#F5E6D3', border: '#D4A574', text: '#8B4513' },
-              'Apiculture': { bg: '#FEF08A', border: '#FACC15', text: '#854D0E' },
-              'Aviculture': { bg: '#E0F2FE', border: '#7DD3FC', text: '#0369A1' },
-            };
-            const color = colors[f.name] || { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' };
-            return (
-              <span
-                key={f.id}
-                style={{
-                  padding: '0.25rem 0.75rem',
-                  borderRadius: '15px',
-                  background: color.bg,
-                  color: color.text,
-                  border: `1px solid ${color.border}`,
-                  fontSize: '0.85rem',
-                }}
-              >
-                {f.name}
-              </span>
-            );
-          })}
-        </div>
-      )}
+      <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1rem', alignItems: 'center' }}>
+        {client.segmentation && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: '#6B7280', fontWeight: 500 }}>Segmentation :</span>
+            <span style={{
+              padding: '0.25rem 0.75rem',
+              borderRadius: '15px',
+              background: client.segmentation === 'DISTRIBUTEUR' ? '#DBEAFE' : client.segmentation === 'AGENT' ? '#FEF3C7' : '#F3F4F6',
+              color: client.segmentation === 'DISTRIBUTEUR' ? '#1E40AF' : client.segmentation === 'AGENT' ? '#92400E' : '#374151',
+              border: `1px solid ${client.segmentation === 'DISTRIBUTEUR' ? '#93C5FD' : client.segmentation === 'AGENT' ? '#FCD34D' : '#D1D5DB'}`,
+              fontSize: '0.85rem',
+            }}>
+              {client.segmentation === 'DISTRIBUTEUR' ? 'Distributeur' : client.segmentation === 'AGENT' ? 'Agent' : 'Autres'}
+            </span>
+          </div>
+        )}
+
+        {client.filieres && client.filieres.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '0.85rem', color: '#6B7280', fontWeight: 500 }}>Filières :</span>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {client.filieres.map((f: { id: string; name: string }) => {
+                const colors: Record<string, { bg: string; border: string; text: string }> = {
+                  'Porcine': { bg: '#FFE4E6', border: '#FDA4AF', text: '#BE123C' },
+                  'Canine': { bg: '#E0E7FF', border: '#A5B4FC', text: '#4338CA' },
+                  'Ovine': { bg: '#D1FAE5', border: '#6EE7B7', text: '#047857' },
+                  'Bovine': { bg: '#F5E6D3', border: '#D4A574', text: '#8B4513' },
+                  'Apiculture': { bg: '#FEF08A', border: '#FACC15', text: '#854D0E' },
+                  'Aviculture': { bg: '#E0F2FE', border: '#7DD3FC', text: '#0369A1' },
+                };
+                const color = colors[f.name] || { bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' };
+                return (
+                  <span
+                    key={f.id}
+                    style={{
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: '15px',
+                      background: color.bg,
+                      color: color.text,
+                      border: `1px solid ${color.border}`,
+                      fontSize: '0.85rem',
+                    }}
+                  >
+                    {f.name}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="client-info-grid">
         <div className="info-card">
@@ -165,7 +186,6 @@ export default function ClientDetailPage() {
         <button className={`tab ${activeTab === 'notes' ? 'active' : ''}`} onClick={() => setActiveTab('notes')}>Notes</button>
         <button className={`tab ${activeTab === 'photos' ? 'active' : ''}`} onClick={() => setActiveTab('photos')}>Photos</button>
         <button className={`tab ${activeTab === 'visits' ? 'active' : ''}`} onClick={() => setActiveTab('visits')}>Visites</button>
-        <button className={`tab ${activeTab === 'lots' ? 'active' : ''}`} onClick={() => setActiveTab('lots')}>Lots</button>
         <button className={`tab ${activeTab === 'orders' ? 'active' : ''}`} onClick={() => setActiveTab('orders')}>Commandes</button>
       </div>
 
@@ -173,12 +193,7 @@ export default function ClientDetailPage() {
         {activeTab === 'notes' && id && <NotesSection clientId={id} />}
         {activeTab === 'photos' && id && <PhotosSection clientId={id} />}
         {activeTab === 'visits' && id && <VisitsSection clientId={id} />}
-        {activeTab === 'lots' && id && <LotsSection clientId={id} />}
-        {activeTab === 'orders' && (
-          <div className="empty-state">
-            <p>Module commandes à venir</p>
-          </div>
-        )}
+        {activeTab === 'orders' && id && <ClientOrdersSection clientId={id} />}
       </div>
     </div>
   );

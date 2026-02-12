@@ -18,12 +18,20 @@ interface Client {
   phone?: string;
   email?: string;
   isActive: boolean;
+  segmentation?: string;
   filieres?: Filiere[];
 }
+
+const SEGMENTATION_OPTIONS = [
+  { value: 'DISTRIBUTEUR', label: 'Distributeur', bg: '#DBEAFE', border: '#93C5FD', text: '#1E40AF' },
+  { value: 'AGENT', label: 'Agent', bg: '#FEF3C7', border: '#FCD34D', text: '#92400E' },
+  { value: 'AUTRES', label: 'Autres', bg: '#F3F4F6', border: '#D1D5DB', text: '#374151' },
+];
 
 export default function ClientsPage() {
   const [search, setSearch] = useState('');
   const [selectedFilieres, setSelectedFilieres] = useState<string[]>([]);
+  const [selectedSegmentations, setSelectedSegmentations] = useState<string[]>([]);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   
   const auth = useRecoilValue(authState);
@@ -33,6 +41,7 @@ export default function ClientsPage() {
   const filter: Record<string, unknown> = {};
   if (search) filter.search = search;
   if (selectedFilieres.length > 0) filter.filiereIds = selectedFilieres;
+  if (selectedSegmentations.length > 0) filter.segmentations = selectedSegmentations;
   
   const { data, loading, error, refetch } = useQuery(MY_CLIENTS_QUERY, {
     variables: { filter: Object.keys(filter).length > 0 ? filter : null },
@@ -89,10 +98,26 @@ export default function ClientsPage() {
   const selectFiliere = (filiereId: string) => {
     setSelectedFilieres(prev => 
       prev.includes(filiereId) 
-        ? prev // Already selected, do nothing (use Réinitialiser to clear)
+        ? prev.filter(id => id !== filiereId)
         : [...prev, filiereId]
     );
   };
+
+  const selectSegmentation = (segmentation: string) => {
+    setSelectedSegmentations(prev => 
+      prev.includes(segmentation) 
+        ? prev.filter(s => s !== segmentation)
+        : [...prev, segmentation]
+    );
+  };
+
+  // Compute segmentation counts from all clients
+  const segmentationCounts: Record<string, number> = {};
+  allClients.forEach(client => {
+    if (client.segmentation) {
+      segmentationCounts[client.segmentation] = (segmentationCounts[client.segmentation] || 0) + 1;
+    }
+  });
 
   const handleExport = async (format: 'csv' | 'json') => {
     const token = localStorage.getItem('accessToken');
@@ -174,17 +199,28 @@ export default function ClientsPage() {
       {showDeleteAllConfirm && (
         <div className="confirm-dialog" style={{ 
           background: '#fef2f2', 
-          padding: '1rem', 
+          padding: '1.5rem', 
           borderRadius: '0.5rem', 
           marginBottom: '1rem',
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
+          flexDirection: 'column',
+          gap: '1rem'
         }}>
-          <span style={{ color: '#991b1b', fontWeight: 500 }}>
-            ⚠️ Supprimer TOUS les clients ({stats?.total || 0}) ? Cette action est irréversible.
-          </span>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ color: '#991b1b' }}>
+            <div style={{ fontWeight: 700, fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+              ⚠️ Attention, cette suppression est irréversible.
+            </div>
+            <div style={{ fontWeight: 500 }}>
+              Supprimer TOUS les clients ({stats?.total || 0}) et leurs données associées :
+            </div>
+            <ul style={{ margin: '0.5rem 0 0 1.5rem', fontSize: '0.9rem' }}>
+              <li>Commandes et lignes de commandes</li>
+              <li>Opportunités et lignes d'opportunités</li>
+              <li>Visites et photos</li>
+              <li>Notes</li>
+            </ul>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
             <button className="btn-secondary" onClick={() => setShowDeleteAllConfirm(false)}>Annuler</button>
             <button 
               className="btn-primary" 
@@ -208,9 +244,39 @@ export default function ClientsPage() {
         />
       </div>
 
-      {filieres.length > 0 && (
-        <div className="filiere-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
-          {filieres.map(f => (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
+        {/* Segmentation filters - only show segmentations with clients */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', color: '#6B7280', fontWeight: 500 }}>Segmentation :</span>
+          {SEGMENTATION_OPTIONS.filter(seg => (segmentationCounts[seg.value] || 0) > 0).map(seg => (
+            <button
+              key={seg.value}
+              type="button"
+              onClick={() => selectSegmentation(seg.value)}
+              style={{
+                padding: '0.4rem 0.8rem',
+                borderRadius: '20px',
+                border: `2px solid ${selectedSegmentations.includes(seg.value) ? seg.text : seg.border}`,
+                background: seg.bg,
+                color: seg.text,
+                cursor: 'pointer',
+                fontSize: '0.85rem',
+                fontWeight: selectedSegmentations.includes(seg.value) ? 600 : 500,
+                transition: 'all 0.2s',
+                boxShadow: selectedSegmentations.includes(seg.value) ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+              }}
+            >
+              {seg.label}
+              <span style={{ marginLeft: '0.4rem', opacity: 0.8 }}>({segmentationCounts[seg.value] || 0})</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Filière filters - only show filières with clients */}
+        {filieres.filter(f => (filiereCounts[f.id] || 0) > 0).length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.85rem', color: '#6B7280', fontWeight: 500 }}>Filières :</span>
+          {filieres.filter(f => (filiereCounts[f.id] || 0) > 0).map(f => (
             <button
               key={f.id}
               type="button"
@@ -235,26 +301,30 @@ export default function ClientsPage() {
               </span>
             </button>
           ))}
-          {selectedFilieres.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setSelectedFilieres([])}
-              style={{
-                padding: '0.4rem 0.8rem',
-                borderRadius: '20px',
-                border: 'none',
-                background: 'transparent',
-                color: 'var(--text-secondary)',
-                cursor: 'pointer',
-                fontSize: '0.85rem',
-                textDecoration: 'underline',
-              }}
-            >
-              Réinitialiser
-            </button>
-          )}
         </div>
-      )}
+        )}
+
+        {/* Reset button */}
+        {(selectedFilieres.length > 0 || selectedSegmentations.length > 0) && (
+          <button
+            type="button"
+            onClick={() => { setSelectedFilieres([]); setSelectedSegmentations([]); }}
+            style={{
+              padding: '0.4rem 0.8rem',
+              borderRadius: '20px',
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+              textDecoration: 'underline',
+              alignSelf: 'flex-start',
+            }}
+          >
+            Réinitialiser les filtres
+          </button>
+        )}
+      </div>
 
       {loading && <div className="loading">Chargement...</div>}
       {error && <div className="error">Erreur: {error.message}</div>}

@@ -11,6 +11,10 @@ export class ClientsFilterInput {
   @IsOptional()
   filiereIds?: string[];
 
+  @Field(() => [String], { nullable: true })
+  @IsOptional()
+  segmentations?: string[];
+
   @Field({ nullable: true })
   @IsOptional()
   city?: string;

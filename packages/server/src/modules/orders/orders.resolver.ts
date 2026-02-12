@@ -18,6 +18,7 @@ export class OrdersResolver {
       userId: user.id,
       tenantId: user.tenantId,
       role: user.role,
+      clientId: user.clientId,
     });
   }
 
@@ -37,6 +38,17 @@ export class OrdersResolver {
     return this.ordersService.findOne(
       { userId: user.id, tenantId: user.tenantId, role: user.role },
       id,
+    );
+  }
+
+  @Query(() => [Order], { name: 'ordersByClient' })
+  findByClient(
+    @CurrentUser() user: any,
+    @Args('clientId') clientId: string,
+  ) {
+    return this.ordersService.findByClient(
+      { userId: user.id, tenantId: user.tenantId, role: user.role },
+      clientId,
     );
   }
 

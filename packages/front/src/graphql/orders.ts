@@ -9,6 +9,7 @@ export const ORDERS_QUERY = gql`
       totalHT
       totalTTC
       taxRate
+      manualAmount
       expectedDelivery
       deliveredAt
       trackingNumber
@@ -24,6 +25,11 @@ export const ORDERS_QUERY = gql`
         name
         organization
         city
+        segmentation
+        filieres {
+          id
+          name
+        }
       }
       owner {
         id
@@ -77,6 +83,7 @@ export const ORDER_QUERY = gql`
       totalHT
       totalTTC
       taxRate
+      manualAmount
       expectedDelivery
       deliveredAt
       trackingNumber

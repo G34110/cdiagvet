@@ -1,5 +1,6 @@
 import { InputType, Field } from '@nestjs/graphql';
 import { IsNotEmpty, IsOptional, IsEmail } from 'class-validator';
+import { ClientSegmentation } from '../entities/client.entity';
 
 @InputType()
 export class CreateClientInput {
@@ -47,4 +48,8 @@ export class CreateClientInput {
   @Field(() => [String], { nullable: true })
   @IsOptional()
   filiereIds?: string[];
+
+  @Field(() => ClientSegmentation, { nullable: true, defaultValue: 'AUTRES' })
+  @IsOptional()
+  segmentation?: ClientSegmentation;
 }

@@ -39,6 +39,7 @@ interface Order {
   totalHT: number;
   totalTTC: number;
   taxRate: number;
+  manualAmount?: number;
   expectedDelivery?: string;
   deliveredAt?: string;
   trackingNumber?: string;
@@ -344,10 +345,31 @@ export default function OrderDetailPage() {
               ))}
             </tbody>
             <tfoot>
-              <tr>
-                <td colSpan={4} className="total-label">Total HT</td>
-                <td className="total-value">{formatCurrency(order.totalHT)}</td>
-              </tr>
+              {(() => {
+                const linesTotal = order.lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+                const additionalAmount = order.manualAmount ?? (order.totalHT - linesTotal);
+                const showAdditional = additionalAmount > 0.01;
+                return (
+                  <>
+                    {showAdditional && (
+                      <tr>
+                        <td colSpan={4} className="total-label">Sous-total lignes</td>
+                        <td className="total-value">{formatCurrency(linesTotal)}</td>
+                      </tr>
+                    )}
+                    {showAdditional && (
+                      <tr>
+                        <td colSpan={4} className="total-label">Montant additionnel</td>
+                        <td className="total-value">{formatCurrency(additionalAmount)}</td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td colSpan={4} className="total-label">Total HT</td>
+                      <td className="total-value">{formatCurrency(order.totalHT)}</td>
+                    </tr>
+                  </>
+                );
+              })()}
               <tr>
                 <td colSpan={4} className="total-label">TVA ({order.taxRate}%)</td>
                 <td className="total-value">{formatCurrency(order.totalTTC - order.totalHT)}</td>

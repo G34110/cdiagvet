@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation } from '@apollo/client';
 import { useNavigate } from 'react-router-dom';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Plus, Target, Euro, Calendar, User } from 'lucide-react';
+import { Plus, Target, Euro, Calendar, User, ChevronDown, Filter } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { 
   OPPORTUNITIES_QUERY, 
@@ -86,9 +86,46 @@ export default function PipelinePage() {
   const [addProductToOpportunity] = useMutation(ADD_PRODUCT_TO_OPPORTUNITY);
   const [addKitToOpportunity] = useMutation(ADD_KIT_TO_OPPORTUNITY);
   const [isAddingLines, setIsAddingLines] = useState(false);
+  const [periodFilter, setPeriodFilter] = useState<string>('');
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
 
   // Filtrer les opportunités converties (elles sont devenues des commandes)
-  const opportunities = (data?.opportunities || []).filter(opp => opp.status !== 'CONVERTI');
+  const allOpportunities = (data?.opportunities || []).filter(opp => opp.status !== 'CONVERTI');
+  
+  // Apply period filter
+  const opportunities = allOpportunities.filter(opp => {
+    if (!periodFilter) return true;
+    
+    const now = new Date();
+    const oppDate = new Date(opp.expectedCloseDate);
+    let periodStart: Date;
+    let periodEnd: Date;
+    
+    switch (periodFilter) {
+      case 'current_month':
+        periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        break;
+      case 'previous_month':
+        periodStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        periodEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        break;
+      case 'previous_quarter':
+        const currentQuarter = Math.floor(now.getMonth() / 3);
+        const prevQuarterStart = currentQuarter === 0 ? 9 : (currentQuarter - 1) * 3;
+        const prevQuarterYear = currentQuarter === 0 ? now.getFullYear() - 1 : now.getFullYear();
+        periodStart = new Date(prevQuarterYear, prevQuarterStart, 1);
+        periodEnd = new Date(prevQuarterYear, prevQuarterStart + 3, 0, 23, 59, 59, 999);
+        break;
+      case 'previous_year':
+        periodStart = new Date(now.getFullYear() - 1, 0, 1);
+        periodEnd = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59, 999);
+        break;
+      default:
+        return true;
+    }
+    return oppDate >= periodStart && oppDate <= periodEnd;
+  });
 
   const getOpportunitiesByStatus = (status: string) => 
     opportunities.filter(opp => opp.status === status);
@@ -295,10 +332,118 @@ export default function PipelinePage() {
           <h1><Target size={28} /> Opportunités</h1>
           <p>{opportunities.length} opportunité{opportunities.length > 1 ? 's' : ''} en cours</p>
         </div>
-        <button className="btn-primary" onClick={() => setShowForm(true)}>
-          <Plus size={20} />
-          Nouvelle opportunité
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <div className="period-filter-container" style={{ position: 'relative' }}>
+            <button
+              className={`btn-secondary ${periodFilter ? 'active' : ''}`}
+              onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Calendar size={16} />
+              {periodFilter === 'current_month' ? 'Ce mois' :
+               periodFilter === 'previous_month' ? 'Mois précédent' :
+               periodFilter === 'previous_quarter' ? 'Trimestre précédent' :
+               periodFilter === 'previous_year' ? 'Année précédente' :
+               'Période'}
+              <ChevronDown size={14} />
+            </button>
+            {showPeriodDropdown && (
+              <div className="period-dropdown" style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '0.25rem',
+                background: 'white',
+                borderRadius: '0.5rem',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                zIndex: 100,
+                minWidth: '180px',
+                overflow: 'hidden'
+              }}>
+                <button
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 1rem',
+                    border: 'none',
+                    background: periodFilter === 'current_month' ? '#EBF5FF' : 'white',
+                    color: periodFilter === 'current_month' ? '#2563eb' : '#374151',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                  onClick={() => { setPeriodFilter('current_month'); setShowPeriodDropdown(false); }}
+                >Ce mois</button>
+                <button
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 1rem',
+                    border: 'none',
+                    background: periodFilter === 'previous_month' ? '#EBF5FF' : 'white',
+                    color: periodFilter === 'previous_month' ? '#2563eb' : '#374151',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                  onClick={() => { setPeriodFilter('previous_month'); setShowPeriodDropdown(false); }}
+                >Mois précédent</button>
+                <button
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 1rem',
+                    border: 'none',
+                    background: periodFilter === 'previous_quarter' ? '#EBF5FF' : 'white',
+                    color: periodFilter === 'previous_quarter' ? '#2563eb' : '#374151',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                  onClick={() => { setPeriodFilter('previous_quarter'); setShowPeriodDropdown(false); }}
+                >Trimestre précédent</button>
+                <button
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 1rem',
+                    border: 'none',
+                    background: periodFilter === 'previous_year' ? '#EBF5FF' : 'white',
+                    color: periodFilter === 'previous_year' ? '#2563eb' : '#374151',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                  onClick={() => { setPeriodFilter('previous_year'); setShowPeriodDropdown(false); }}
+                >Année précédente</button>
+                <div style={{ borderTop: '1px solid #e5e7eb' }} />
+                <button
+                  style={{
+                    width: '100%',
+                    padding: '0.6rem 1rem',
+                    border: 'none',
+                    background: !periodFilter ? '#EBF5FF' : 'white',
+                    color: !periodFilter ? '#2563eb' : '#374151',
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    fontSize: '0.9rem'
+                  }}
+                  onClick={() => { setPeriodFilter(''); setShowPeriodDropdown(false); }}
+                >Toutes</button>
+              </div>
+            )}
+          </div>
+          {periodFilter && (
+            <button
+              className="btn-clear-filter"
+              onClick={() => setPeriodFilter('')}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0.5rem 0.75rem', fontSize: '0.85rem' }}
+            >
+              <Filter size={14} />
+              Effacer
+            </button>
+          )}
+          <button className="btn-primary" onClick={() => setShowForm(true)}>
+            <Plus size={20} />
+            Nouvelle opportunité
+          </button>
+        </div>
       </header>
 
       {showForm && (

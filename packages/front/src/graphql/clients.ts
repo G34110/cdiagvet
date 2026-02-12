@@ -46,6 +46,7 @@ export const MY_CLIENTS_QUERY = gql`
       phone
       email
       isActive
+      segmentation
       filieres {
         id
         name
@@ -71,6 +72,7 @@ export const CLIENT_QUERY = gql`
       latitude
       longitude
       isActive
+      segmentation
       createdAt
       updatedAt
       filieres {

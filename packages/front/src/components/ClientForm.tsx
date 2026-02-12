@@ -5,6 +5,12 @@ import { Save, X } from 'lucide-react';
 import { CREATE_CLIENT_MUTATION, UPDATE_CLIENT_MUTATION, MY_CLIENTS_QUERY, ALL_FILIERES_QUERY } from '../graphql/clients';
 import { countries, getCountryConfig, getRegionList } from '../config/countries';
 
+const SEGMENTATION_OPTIONS = [
+  { value: 'DISTRIBUTEUR', label: 'Distributeur' },
+  { value: 'AGENT', label: 'Agent' },
+  { value: 'AUTRES', label: 'Autres' },
+];
+
 interface ClientFormProps {
   client?: {
     id: string;
@@ -20,6 +26,7 @@ interface ClientFormProps {
     email?: string;
     filieres?: { id: string; name: string }[];
     isActive?: boolean;
+    segmentation?: string;
   };
   onCancel?: () => void;
   onSuccess?: () => void;
@@ -42,6 +49,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
     email: client?.email || '',
     filiereIds: client?.filieres?.map(f => f.id) || [] as string[],
     isActive: client?.isActive ?? true,
+    segmentation: client?.segmentation || 'AUTRES',
   });
 
   const countryConfig = useMemo(() => getCountryConfig(form.country), [form.country]);
@@ -94,6 +102,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
     if (form.phone) cleanedInput.phone = form.phone;
     if (form.email) cleanedInput.email = form.email;
     cleanedInput.filiereIds = form.filiereIds;
+    cleanedInput.segmentation = form.segmentation;
 
     // Only include isActive for updates (not creation)
     if (isEditing) {
@@ -168,16 +177,16 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
 
       <div className="form-row">
         <div className="form-group">
-          <label htmlFor="country">Pays *</label>
+          <label htmlFor="segmentation">Segmentation *</label>
           <select
-            id="country"
-            name="country"
-            value={form.country}
-            onChange={handleCountryChange}
+            id="segmentation"
+            name="segmentation"
+            value={form.segmentation}
+            onChange={handleChange}
             required
           >
-            {countries.map(c => (
-              <option key={c.code} value={c.code}>{c.name}</option>
+            {SEGMENTATION_OPTIONS.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
             ))}
           </select>
         </div>
@@ -191,6 +200,23 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
             onChange={handleChange}
             placeholder="Organisation (optionnel)"
           />
+        </div>
+      </div>
+
+      <div className="form-row">
+        <div className="form-group">
+          <label htmlFor="country">Pays *</label>
+          <select
+            id="country"
+            name="country"
+            value={form.country}
+            onChange={handleCountryChange}
+            required
+          >
+            {countries.map(c => (
+              <option key={c.code} value={c.code}>{c.name}</option>
+            ))}
+          </select>
         </div>
       </div>
 

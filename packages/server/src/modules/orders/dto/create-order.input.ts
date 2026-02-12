@@ -36,7 +36,6 @@ export class CreateOrderLineInput {
 export class CreateOrderInput {
   @Field()
   @IsNotEmpty()
-  @IsUUID()
   clientId: string;
 
   @Field({ nullable: true })

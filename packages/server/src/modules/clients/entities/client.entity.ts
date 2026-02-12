@@ -1,6 +1,17 @@
-import { ObjectType, Field, ID, Float } from '@nestjs/graphql';
+import { ObjectType, Field, ID, Float, registerEnumType } from '@nestjs/graphql';
 import { User } from '../../users/entities/user.entity';
 import { Filiere } from '../../filieres/entities/filiere.entity';
+
+export enum ClientSegmentation {
+  DISTRIBUTEUR = 'DISTRIBUTEUR',
+  AGENT = 'AGENT',
+  AUTRES = 'AUTRES',
+}
+
+registerEnumType(ClientSegmentation, {
+  name: 'ClientSegmentation',
+  description: 'Segmentation du client',
+});
 
 @ObjectType()
 export class Client {
@@ -45,6 +56,9 @@ export class Client {
 
   @Field()
   isActive: boolean;
+
+  @Field(() => ClientSegmentation)
+  segmentation: ClientSegmentation;
 
   @Field()
   createdAt: Date;

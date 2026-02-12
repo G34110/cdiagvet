@@ -43,6 +43,7 @@ export class AuthService {
       role: user.role,
       tenantId: user.tenantId,
       filiereIds, // Array of filière IDs
+      clientId: (user as any).clientId || null,
     };
 
     return {
@@ -54,6 +55,7 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         filiereIds,
+        clientId: (user as any).clientId || null,
       },
     };
   }

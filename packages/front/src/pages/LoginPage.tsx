@@ -14,6 +14,7 @@ const LOGIN_MUTATION = gql`
         firstName
         lastName
         role
+        clientId
       }
     }
   }
@@ -32,7 +33,12 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
       setAuth({ isAuthenticated: true, user, accessToken });
-      navigate('/dashboard');
+      // Redirect distributors to portal, others to dashboard
+      if (user.role === 'DISTRIBUTEUR') {
+        navigate('/portail');
+      } else {
+        navigate('/dashboard');
+      }
     },
     onError: (err) => {
       setError(err.message || 'Identifiants incorrects');

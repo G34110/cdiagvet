@@ -96,6 +96,10 @@ export class ClientsService {
       where.filieres = { some: { filiereId: { in: filter.filiereIds } } };
     }
 
+    if (filter?.segmentations?.length) {
+      where.segmentation = { in: filter.segmentations };
+    }
+
     if (filter?.city) {
       where.city = { contains: filter.city, mode: 'insensitive' };
     }
@@ -144,6 +148,11 @@ export class ClientsService {
           filiereId: { in: filter.filiereIds },
         },
       };
+    }
+
+    // Filter by segmentation
+    if (filter?.segmentations?.length) {
+      where.segmentation = { in: filter.segmentations };
     }
 
     const clients = await this.prisma.client.findMany({
@@ -212,6 +221,11 @@ export class ClientsService {
           some: { filiereId: { in: filter.filiereIds } },
         };
       }
+    }
+
+    // Filter by segmentation
+    if (filter?.segmentations?.length) {
+      where.segmentation = { in: filter.segmentations };
     }
 
     const clients = await this.prisma.client.findMany({
@@ -377,11 +391,21 @@ export class ClientsService {
       
       if (clientIds.length === 0) return 0;
 
-      // Delete dependent records first
+      // Delete dependent records first (cascade)
+      // Delete order lines before orders
+      await tx.orderLine.deleteMany({ where: { order: { clientId: { in: clientIds } } } });
       await tx.order.deleteMany({ where: { clientId: { in: clientIds } } });
-      await tx.lotClient.deleteMany({ where: { clientId: { in: clientIds } } });
+      
+      // Delete opportunity lines before opportunities
+      await tx.opportunityLine.deleteMany({ where: { opportunity: { clientId: { in: clientIds } } } });
+      await tx.opportunity.deleteMany({ where: { clientId: { in: clientIds } } });
+      
+      // Delete visits and related data
       await tx.photo.deleteMany({ where: { visit: { clientId: { in: clientIds } } } });
       await tx.visit.deleteMany({ where: { clientId: { in: clientIds } } });
+      
+      // Delete other dependent records
+      await tx.lotClient.deleteMany({ where: { clientId: { in: clientIds } } });
       await tx.note.deleteMany({ where: { clientId: { in: clientIds } } });
       
       // Delete clients (ClientFiliere will cascade)

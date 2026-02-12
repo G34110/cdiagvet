@@ -8,6 +8,7 @@ interface RequestContext {
   userId: string;
   tenantId: string;
   role: string;
+  clientId?: string;
 }
 
 @Injectable()
@@ -39,6 +40,8 @@ export class OrdersService {
 
     if (ctx.role === 'COMMERCIAL') {
       where.ownerId = ctx.userId;
+    } else if (ctx.role === 'DISTRIBUTEUR' && ctx.clientId) {
+      where.clientId = ctx.clientId;
     }
 
     return this.prisma.order.findMany({
@@ -54,6 +57,24 @@ export class OrdersService {
 
   async findByStatus(ctx: RequestContext, status: OrderStatus) {
     const where: any = { tenantId: ctx.tenantId, status };
+
+    if (ctx.role === 'COMMERCIAL') {
+      where.ownerId = ctx.userId;
+    }
+
+    return this.prisma.order.findMany({
+      where,
+      include: {
+        client: true,
+        owner: true,
+        lines: { orderBy: { createdAt: 'asc' } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findByClient(ctx: RequestContext, clientId: string) {
+    const where: any = { tenantId: ctx.tenantId, clientId };
 
     if (ctx.role === 'COMMERCIAL') {
       where.ownerId = ctx.userId;
@@ -132,9 +153,12 @@ export class OrdersService {
     opportunityId: string,
     opportunityLines: { productName: string; quantity: number; unitPrice: number; productId?: string; kitId?: string }[],
     clientId: string,
+    manualAmount: number = 0,
   ) {
     const reference = await this.generateReference(ctx.tenantId);
-    const { totalHT, totalTTC } = this.calculateTotals(opportunityLines, 20);
+    const linesTotals = this.calculateTotals(opportunityLines, 20);
+    const totalHT = linesTotals.totalHT + manualAmount;
+    const totalTTC = totalHT * 1.2;
 
     return this.prisma.order.create({
       data: {
@@ -146,6 +170,7 @@ export class OrdersService {
         totalHT,
         totalTTC,
         taxRate: 20,
+        manualAmount,
         status: 'BROUILLON',
         lines: {
           create: opportunityLines.map(line => ({

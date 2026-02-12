@@ -403,11 +403,11 @@ async function seedDevelopment(base: any) {
     responsables.push(resp);
   }
 
-  // Create test clients BOVINE
+  // Create test clients BOVINE with different segmentations
   const clientsBovine = [
-    { name: 'Élevage Durand', city: 'Limoges', postalCode: '87000', email: 'durand@elevage.fr' },
-    { name: 'Ferme des Prairies', city: 'Tulle', postalCode: '19000', email: 'prairies@ferme.fr' },
-    { name: 'GAEC du Plateau', city: 'Brive', postalCode: '19100', email: 'plateau@gaec.fr' },
+    { name: 'Élevage Durand', city: 'Limoges', postalCode: '87000', email: 'durand@elevage.fr', segmentation: 'DISTRIBUTEUR' as const },
+    { name: 'Ferme des Prairies', city: 'Tulle', postalCode: '19000', email: 'prairies@ferme.fr', segmentation: 'AGENT' as const },
+    { name: 'GAEC du Plateau', city: 'Brive', postalCode: '19100', email: 'plateau@gaec.fr', segmentation: 'AUTRES' as const },
   ];
 
   for (const c of clientsBovine) {
@@ -418,6 +418,7 @@ async function seedDevelopment(base: any) {
           name: c.name, addressLine1: '123 Route de la Ferme', city: c.city,
           postalCode: c.postalCode, country: 'FR', email: c.email, phone: '05 55 00 00 00',
           tenantId: tenant.id, commercialId: commercial.id, isActive: true,
+          segmentation: c.segmentation,
         },
       });
     }
@@ -434,10 +435,10 @@ async function seedDevelopment(base: any) {
     });
   }
 
-  // Create test clients OVINE
+  // Create test clients OVINE with different segmentations
   const clientsOvine = [
-    { name: 'Bergerie du Larzac', city: 'Millau', postalCode: '12100', email: 'larzac@bergerie.fr' },
-    { name: 'Élevage Mouton d\'Or', city: 'Rodez', postalCode: '12000', email: 'moutondor@elevage.fr' },
+    { name: 'Bergerie du Larzac', city: 'Millau', postalCode: '12100', email: 'larzac@bergerie.fr', segmentation: 'AGENT' as const },
+    { name: 'Élevage Mouton d\'Or', city: 'Rodez', postalCode: '12000', email: 'moutondor@elevage.fr', segmentation: 'DISTRIBUTEUR' as const },
   ];
 
   for (const c of clientsOvine) {
@@ -448,6 +449,7 @@ async function seedDevelopment(base: any) {
           name: c.name, addressLine1: '456 Chemin des Pâturages', city: c.city,
           postalCode: c.postalCode, country: 'FR', email: c.email, phone: '05 65 00 00 00',
           tenantId: tenant.id, commercialId: commercial.id, isActive: true,
+          segmentation: c.segmentation,
         },
       });
     }
@@ -502,11 +504,98 @@ async function seedDevelopment(base: any) {
     opportunityCount++;
   }
 
+  // Create Lots for products
+  const lotsData = [
+    { lotNumber: 'LOT-2026-001', productIndex: 0, daysUntilExpiry: 180 },
+    { lotNumber: 'LOT-2026-002', productIndex: 1, daysUntilExpiry: 365 },
+    { lotNumber: 'LOT-2026-003', productIndex: 2, daysUntilExpiry: 90 },
+    { lotNumber: 'LOT-2026-004', productIndex: 0, daysUntilExpiry: 270 },
+    { lotNumber: 'LOT-2026-005', productIndex: 3, daysUntilExpiry: 120 },
+  ];
+
+  for (const lotData of lotsData) {
+    if (allProducts[lotData.productIndex]) {
+      const product = allProducts[lotData.productIndex];
+      const expirationDate = new Date(Date.now() + lotData.daysUntilExpiry * 24 * 60 * 60 * 1000);
+      
+      const existingLot = await prisma.lot.findFirst({
+        where: { productId: product.id, lotNumber: lotData.lotNumber },
+      });
+
+      if (!existingLot) {
+        const lot = await prisma.lot.create({
+          data: {
+            lotNumber: lotData.lotNumber,
+            expirationDate,
+            productId: product.id,
+          },
+        });
+
+        // Associate lot with some clients
+        for (let i = 0; i < Math.min(2, allClients.length); i++) {
+          await prisma.lotClient.create({
+            data: {
+              lotId: lot.id,
+              clientId: allClients[i].id,
+              quantity: Math.floor(Math.random() * 10) + 1,
+              deliveryDate: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000),
+            },
+          });
+        }
+      }
+    }
+  }
+  console.log(`   - Lots créés: ${lotsData.length}`);
+
+  // Create distributor user and client with portailEnabled
+  // The client "Paul Vendeur" is the distributor that the commercial Jean manages
+  const distributorClient = await prisma.client.upsert({
+    where: { id: 'client-paul-vendeur' },
+    update: { portailEnabled: true },
+    create: {
+      id: 'client-paul-vendeur',
+      name: 'Paul Vendeur',
+      organization: 'Distrib Vét SARL',
+      addressLine1: '15 Rue du Commerce',
+      city: 'Grabels',
+      postalCode: '34790',
+      country: 'FR',
+      email: 'paul.vendeur@distribvet.fr',
+      phone: '04 67 00 00 00',
+      tenantId: tenant.id,
+      commercialId: commercial.id,
+      isActive: true,
+      portailEnabled: true,
+      segmentation: 'DISTRIBUTEUR',
+    },
+  });
+
+  await prisma.clientFiliere.upsert({
+    where: { clientId_filiereId: { clientId: distributorClient.id, filiereId: filieres['BOVINE'].id } },
+    update: {},
+    create: { clientId: distributorClient.id, filiereId: filieres['BOVINE'].id },
+  });
+
+  const distributorUser = await prisma.user.upsert({
+    where: { email: 'distributeur@cdiagvet.local' },
+    update: { clientId: distributorClient.id },
+    create: {
+      email: 'distributeur@cdiagvet.local',
+      passwordHash: hashedPassword,
+      firstName: 'Paul',
+      lastName: 'Vendeur',
+      role: 'DISTRIBUTEUR',
+      tenantId: tenant.id,
+      clientId: distributorClient.id,
+    },
+  });
+
   console.log('✅ Données DEV créées:');
   console.log(`   - Commerciaux: 3`);
   console.log(`   - Responsables Filière: ${responsables.length}`);
-  console.log(`   - Clients: ${clientsBovine.length + clientsOvine.length}`);
+  console.log(`   - Clients: ${clientsBovine.length + clientsOvine.length + 1}`);
   console.log(`   - Opportunités: ${opportunityCount}`);
+  console.log(`   - Distributeur: ${distributorUser.email} (client: ${distributorClient.name})`);
   console.log('\n📧 Mot de passe pour tous: admin123');
 }
 

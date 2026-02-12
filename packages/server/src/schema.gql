@@ -38,6 +38,7 @@ type Client {
   phone: String
   postalCode: String
   region: String
+  segmentation: ClientSegmentation!
   updatedAt: DateTime!
 }
 
@@ -58,6 +59,13 @@ type ClientMapItem {
   name: String!
 }
 
+"""Segmentation du client"""
+enum ClientSegmentation {
+  AGENT
+  AUTRES
+  DISTRIBUTEUR
+}
+
 type ClientStats {
   active: Int!
   inactive: Int!
@@ -69,6 +77,7 @@ input ClientsFilterInput {
   filiereIds: [String!]
   isActive: Boolean
   search: String
+  segmentations: [String!]
   skip: Int = 0
   take: Int = 50
 }
@@ -97,6 +106,7 @@ input CreateClientInput {
   phone: String
   postalCode: String
   region: String
+  segmentation: ClientSegmentation = AUTRES
 }
 
 input CreateNoteInput {
@@ -429,6 +439,7 @@ type Order {
   expectedDelivery: DateTime
   id: String!
   lines: [OrderLine!]!
+  manualAmount: Float!
   notes: String
   opportunityId: String
   owner: User!
@@ -542,6 +553,7 @@ type Query {
   opportunityTimeline(opportunityId: String!): OpportunityTimeline!
   order(id: String!): Order!
   orders: [Order!]!
+  ordersByClient(clientId: String!): [Order!]!
   ordersByStatus(status: OrderStatus!): [Order!]!
   product(id: String!): Product!
   productKit(id: String!): ProductKit!
@@ -597,6 +609,7 @@ input UpdateClientInput {
   phone: String
   postalCode: String
   region: String
+  segmentation: ClientSegmentation = AUTRES
 }
 
 input UpdateNoteInput {
@@ -675,6 +688,7 @@ type User {
 }
 
 type UserPayload {
+  clientId: String
   email: String!
   firstName: String!
   id: String!

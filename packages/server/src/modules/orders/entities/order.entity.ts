@@ -66,6 +66,9 @@ export class Order {
   @Field(() => Float)
   taxRate: number;
 
+  @Field(() => Float)
+  manualAmount: number;
+
   @Field({ nullable: true })
   expectedDelivery?: Date;
 

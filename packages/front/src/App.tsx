@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useRecoilValue } from 'recoil';
 import { authState } from './state/auth';
 import Layout from './components/Layout';
+import PortailLayout from './components/PortailLayout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ClientsPage from './pages/ClientsPage';
@@ -18,10 +19,22 @@ import OpportunityDetailPage from './pages/OpportunityDetailPage';
 import ProductsPage from './pages/ProductsPage';
 import OrdersPage from './pages/OrdersPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import PortailCatalogue from './pages/portail/PortailCatalogue';
+import PortailPanier from './pages/portail/PortailPanier';
+import PortailCommandes from './pages/portail/PortailCommandes';
+import PortailCompte from './pages/portail/PortailCompte';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const auth = useRecoilValue(authState);
   return auth.isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+}
+
+function CRMRoute({ children }: { children: React.ReactNode }) {
+  const auth = useRecoilValue(authState);
+  if (!auth.isAuthenticated) return <Navigate to="/login" />;
+  // Distributors can only access /portail
+  if (auth.user?.role === 'DISTRIBUTEUR') return <Navigate to="/portail" />;
+  return <>{children}</>;
 }
 
 function App() {
@@ -31,9 +44,9 @@ function App() {
       <Route
         path="/"
         element={
-          <PrivateRoute>
+          <CRMRoute>
             <Layout />
-          </PrivateRoute>
+          </CRMRoute>
         }
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
@@ -52,6 +65,22 @@ function App() {
         <Route path="commandes" element={<OrdersPage />} />
         <Route path="commandes/:id" element={<OrderDetailPage />} />
         <Route path="products" element={<ProductsPage />} />
+      </Route>
+
+      {/* Portail Distributeur */}
+      <Route
+        path="/portail"
+        element={
+          <PrivateRoute>
+            <PortailLayout />
+          </PrivateRoute>
+        }
+      >
+        <Route index element={<Navigate to="catalogue" replace />} />
+        <Route path="catalogue" element={<PortailCatalogue />} />
+        <Route path="panier" element={<PortailPanier />} />
+        <Route path="commandes" element={<PortailCommandes />} />
+        <Route path="compte" element={<PortailCompte />} />
       </Route>
     </Routes>
   );
