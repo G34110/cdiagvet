@@ -87,6 +87,12 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
       return;
     }
 
+    // Validate email required
+    if (!form.email) {
+      alert('L\'email est obligatoire');
+      return;
+    }
+
     // Build input - only include non-empty fields
     const cleanedInput: Record<string, unknown> = {
       name: form.name,
@@ -100,7 +106,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
     if (form.region) cleanedInput.region = form.region;
     if (form.postalCode) cleanedInput.postalCode = form.postalCode;
     if (form.phone) cleanedInput.phone = form.phone;
-    if (form.email) cleanedInput.email = form.email;
+    cleanedInput.email = form.email;
     cleanedInput.filiereIds = form.filiereIds;
     cleanedInput.segmentation = form.segmentation;
 
@@ -320,7 +326,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
           />
         </div>
         <div className="form-group">
-          <label htmlFor="email">Email</label>
+          <label htmlFor="email">Email *</label>
           <input
             type="email"
             id="email"
@@ -328,6 +334,7 @@ export default function ClientForm({ client, onCancel, onSuccess }: ClientFormPr
             value={form.email}
             onChange={handleChange}
             placeholder="Email"
+            required
           />
         </div>
       </div>

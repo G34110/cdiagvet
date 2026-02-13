@@ -127,13 +127,6 @@ export class OpportunitiesService {
         select: { id: true, ownerId: true },
       });
       if (exists) {
-        console.log('Opportunity exists but access denied:', { 
-          oppId: id, 
-          oppOwnerId: exists.ownerId,
-          userId: ctx.userId, 
-          role: ctx.role,
-          filiereIds: ctx.filiereIds 
-        });
       }
       throw new NotFoundException('Opportunité non trouvée');
     }
@@ -501,7 +494,6 @@ export class OpportunitiesService {
     const manualAmount = Number(opportunity?.[0]?.manualAmount) || 0;
     const totalAmount = manualAmount + linesTotal;
     
-    console.log('recalculateOpportunityAmount:', { opportunityId, manualAmount, linesTotal, totalAmount });
 
     await this.prisma.opportunity.update({
       where: { id: opportunityId },

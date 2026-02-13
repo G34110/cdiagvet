@@ -44,9 +44,6 @@ export class AuthResolver {
     @Args('input') input: ChangePasswordInput,
     @Context() context: any,
   ): Promise<ResetPasswordPayload> {
-    console.log('[DEBUG] changePassword called with input:', input);
-    console.log('[DEBUG] context.req.user:', context?.req?.user);
-    
     try {
       if (input.newPassword !== input.confirmPassword) {
         return { success: false, message: 'Les mots de passe ne correspondent pas' };
@@ -66,8 +63,6 @@ export class AuthResolver {
       }
       
       const userId = context?.req?.user?.id;
-      console.log('[DEBUG] userId:', userId);
-      
       if (!userId) {
         return { success: false, message: 'Utilisateur non authentifié' };
       }

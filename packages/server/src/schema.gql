@@ -104,7 +104,7 @@ input CreateClientInput {
   addressLine2: String
   city: String
   country: String = "FR"
-  email: String
+  email: String!
   filiereIds: [String!]
   name: String!
   organization: String

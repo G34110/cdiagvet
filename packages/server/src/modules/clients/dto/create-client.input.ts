@@ -40,10 +40,10 @@ export class CreateClientInput {
   @IsOptional()
   phone?: string;
 
-  @Field({ nullable: true })
-  @IsOptional()
+  @Field()
+  @IsNotEmpty({ message: 'L\'email est obligatoire' })
   @IsEmail({}, { message: 'Email invalide' })
-  email?: string;
+  email: string;
 
   @Field(() => [String], { nullable: true })
   @IsOptional()

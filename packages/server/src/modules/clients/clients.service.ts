@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { GeocodingService } from '../../common/services/geocoding.service';
+import { EmailService } from '../../common/services/email.service';
 import { CreateClientInput } from './dto/create-client.input';
 import { UpdateClientInput } from './dto/update-client.input';
 import { ClientsFilterInput } from './dto/clients-filter.input';
@@ -13,6 +14,7 @@ export class ClientsService {
   constructor(
     private prisma: PrismaService,
     private geocoding: GeocodingService,
+    private emailService: EmailService,
   ) {}
 
   async create(input: CreateClientInput, tenantId: string, commercialId: string) {
@@ -46,8 +48,8 @@ export class ClientsService {
       },
     });
 
-    // Auto-create portal account for DISTRIBUTEUR or AGENT clients with email
-    if ((input.segmentation === 'DISTRIBUTEUR' || input.segmentation === 'AGENT') && input.email) {
+    // Auto-create portal account for DISTRIBUTEUR or AGENT clients
+    if (input.segmentation === 'DISTRIBUTEUR' || input.segmentation === 'AGENT') {
       await this.createPortalAccount(client.id, input.email, input.name, tenantId);
     }
 
@@ -58,7 +60,17 @@ export class ClientsService {
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
     
     if (existingUser) {
-      this.logger.log(`Portal account already exists for ${email}`);
+      this.logger.log(`Portal account already exists for ${email} - resetting password and sending credentials email`);
+      // Reset password to client123 and set mustChangePassword
+      const hashedPassword = await bcrypt.hash('client123', 10);
+      await this.prisma.user.update({
+        where: { email },
+        data: { 
+          passwordHash: hashedPassword,
+          mustChangePassword: true,
+        },
+      });
+      await this.emailService.sendPortalCredentials(email, clientName, 'client123');
       return;
     }
 
@@ -84,6 +96,9 @@ export class ClientsService {
     });
     
     this.logger.log(`Portal account created for ${email} (password=client123, must change on first login)`);
+    
+    // Send email with credentials
+    await this.emailService.sendPortalCredentials(email, clientName, 'client123');
   }
 
   private transformClientFilieres(client: any) {
@@ -213,7 +228,6 @@ export class ClientsService {
     };
 
     // Role-based filtering
-    console.log('findByUserRole ctx:', { email: ctx.email, role: ctx.role, filiereIds: ctx.filiereIds });
     if (ctx.role === 'COMMERCIAL') {
       where.commercialId = ctx.userId;
     } else if (ctx.role === 'RESPONSABLE_FILIERE') {
@@ -221,7 +235,6 @@ export class ClientsService {
         where.filieres = { some: { filiereId: { in: ctx.filiereIds } } };
       } else {
         // RESPONSABLE without filières sees nothing (security)
-        console.log('RESPONSABLE_FILIERE without filiereIds - returning empty');
         return [];
       }
     }
@@ -360,6 +373,12 @@ export class ClientsService {
       throw new ForbiddenException('Access denied');
     }
 
+    // Delete associated portal user account if exists
+    await this.prisma.user.deleteMany({
+      where: { clientId: id },
+    });
+    this.logger.log(`Deleted portal account(s) for client ${id}`);
+
     return this.prisma.client.update({
       where: { id },
       data: { deletedAt: new Date(), isActive: false },
@@ -445,6 +464,9 @@ export class ClientsService {
       // Delete other dependent records
       await tx.lotClient.deleteMany({ where: { clientId: { in: clientIds } } });
       await tx.note.deleteMany({ where: { clientId: { in: clientIds } } });
+      
+      // Delete portal user accounts
+      await tx.user.deleteMany({ where: { clientId: { in: clientIds } } });
       
       // Delete clients (ClientFiliere will cascade)
       const deleted = await tx.client.deleteMany({ where: { tenantId } });
