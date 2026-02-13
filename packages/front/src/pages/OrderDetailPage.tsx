@@ -282,7 +282,7 @@ export default function OrderDetailPage() {
               </span>
             </div>
             <div className="info-item">
-              <label>Commercial</label>
+              <label>Contributeur</label>
               <span>
                 <User size={14} />
                 {order.owner.firstName} {order.owner.lastName}

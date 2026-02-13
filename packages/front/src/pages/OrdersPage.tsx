@@ -112,9 +112,11 @@ export default function OrdersPage() {
   };
 
   const filteredOrders = orders.filter(order => {
+    const ownerName = order.owner ? `${order.owner.firstName} ${order.owner.lastName}`.toLowerCase() : '';
     const matchesSearch =
       order.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.client.name.toLowerCase().includes(searchTerm.toLowerCase());
+      order.client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ownerName.includes(searchTerm.toLowerCase());
     const matchesStatus = !statusFilter || order.status === statusFilter;
     
     // Segmentation filter
@@ -279,7 +281,7 @@ export default function OrdersPage() {
           <Search size={18} />
           <input
             type="text"
-            placeholder="Rechercher par référence ou client..."
+            placeholder="Rechercher par référence, client ou contributeur..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -487,7 +489,7 @@ export default function OrdersPage() {
               <th>Montant TTC</th>
               <th>Date création</th>
               <th>Livraison prévue</th>
-              <th>Commercial</th>
+              <th>Contributeur</th>
             </tr>
           </thead>
           <tbody>

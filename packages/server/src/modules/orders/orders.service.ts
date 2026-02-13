@@ -15,18 +15,31 @@ interface RequestContext {
 export class OrdersService {
   constructor(private prisma: PrismaService) {}
 
-  private async generateReference(tenantId: string): Promise<string> {
+  private async generateReference(_tenantId: string): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await this.prisma.order.count({
+    const prefix = `CMD-${year}-`;
+    
+    // Find the max sequence number globally (reference is unique across all tenants)
+    const orders = await this.prisma.order.findMany({
       where: {
-        tenantId,
-        createdAt: {
-          gte: new Date(`${year}-01-01`),
-        },
+        reference: { startsWith: prefix },
       },
+      select: { reference: true },
     });
-    const sequence = String(count + 1).padStart(5, '0');
-    return `CMD-${year}-${sequence}`;
+    
+    let maxSequence = 0;
+    for (const order of orders) {
+      const match = order.reference.match(/CMD-\d{4}-(\d+)/);
+      if (match) {
+        const seq = parseInt(match[1], 10);
+        if (seq > maxSequence) {
+          maxSequence = seq;
+        }
+      }
+    }
+    
+    const nextSequence = maxSequence + 1;
+    return `${prefix}${String(nextSequence).padStart(5, '0')}`;
   }
 
   private calculateTotals(lines: { quantity: number; unitPrice: number }[], taxRate: number) {
@@ -114,38 +127,51 @@ export class OrdersService {
   }
 
   async create(ctx: RequestContext, input: CreateOrderInput) {
-    const reference = await this.generateReference(ctx.tenantId);
     const lines = input.lines || [];
     const { totalHT, totalTTC } = this.calculateTotals(lines, 20);
 
-    return this.prisma.order.create({
-      data: {
-        reference,
-        clientId: input.clientId,
-        ownerId: ctx.userId,
-        tenantId: ctx.tenantId,
-        notes: input.notes,
-        expectedDelivery: input.expectedDelivery,
-        totalHT,
-        totalTTC,
-        taxRate: 20,
-        lines: {
-          create: lines.map(line => ({
-            productName: line.productName,
-            productCode: line.productCode,
-            quantity: line.quantity,
-            unitPrice: line.unitPrice,
-            productId: line.productId,
-            kitId: line.kitId,
-          })),
-        },
-      },
-      include: {
-        client: true,
-        owner: true,
-        lines: { orderBy: { createdAt: 'asc' } },
-      },
-    });
+    // Retry loop to handle unique constraint conflicts
+    const maxRetries = 5;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const reference = await this.generateReference(ctx.tenantId);
+      try {
+        return await this.prisma.order.create({
+          data: {
+            reference,
+            clientId: input.clientId,
+            ownerId: ctx.userId,
+            tenantId: ctx.tenantId,
+            notes: input.notes,
+            expectedDelivery: input.expectedDelivery,
+            totalHT,
+            totalTTC,
+            taxRate: 20,
+            lines: {
+              create: lines.map(line => ({
+                productName: line.productName,
+                productCode: line.productCode,
+                quantity: line.quantity,
+                unitPrice: line.unitPrice,
+                productId: line.productId,
+                kitId: line.kitId,
+              })),
+            },
+          },
+          include: {
+            client: true,
+            owner: true,
+            lines: { orderBy: { createdAt: 'asc' } },
+          },
+        });
+      } catch (error: any) {
+        if (error.code === 'P2002' && attempt < maxRetries - 1) {
+          // Unique constraint failed, retry with new reference
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new BadRequestException('Impossible de générer une référence unique pour la commande');
   }
 
   async createFromOpportunity(
@@ -155,40 +181,52 @@ export class OrdersService {
     clientId: string,
     manualAmount: number = 0,
   ) {
-    const reference = await this.generateReference(ctx.tenantId);
     const linesTotals = this.calculateTotals(opportunityLines, 20);
     const totalHT = linesTotals.totalHT + manualAmount;
     const totalTTC = totalHT * 1.2;
 
-    return this.prisma.order.create({
-      data: {
-        reference,
-        clientId,
-        ownerId: ctx.userId,
-        tenantId: ctx.tenantId,
-        opportunityId,
-        totalHT,
-        totalTTC,
-        taxRate: 20,
-        manualAmount,
-        status: 'BROUILLON',
-        lines: {
-          create: opportunityLines.map(line => ({
-            productName: line.productName,
-            quantity: line.quantity,
-            unitPrice: line.unitPrice,
-            productId: line.productId || null,
-            kitId: line.kitId || null,
-          })),
-        },
-      },
-      include: {
-        client: true,
-        owner: true,
-        opportunity: true,
-        lines: { orderBy: { createdAt: 'asc' } },
-      },
-    });
+    // Retry loop to handle unique constraint conflicts
+    const maxRetries = 5;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      const reference = await this.generateReference(ctx.tenantId);
+      try {
+        return await this.prisma.order.create({
+          data: {
+            reference,
+            clientId,
+            ownerId: ctx.userId,
+            tenantId: ctx.tenantId,
+            opportunityId,
+            totalHT,
+            totalTTC,
+            taxRate: 20,
+            manualAmount,
+            status: 'BROUILLON',
+            lines: {
+              create: opportunityLines.map(line => ({
+                productName: line.productName,
+                quantity: line.quantity,
+                unitPrice: line.unitPrice,
+                productId: line.productId || null,
+                kitId: line.kitId || null,
+              })),
+            },
+          },
+          include: {
+            client: true,
+            owner: true,
+            opportunity: true,
+            lines: { orderBy: { createdAt: 'asc' } },
+          },
+        });
+      } catch (error: any) {
+        if (error.code === 'P2002' && attempt < maxRetries - 1) {
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new BadRequestException('Impossible de générer une référence unique pour la commande');
   }
 
   async update(ctx: RequestContext, input: UpdateOrderInput) {

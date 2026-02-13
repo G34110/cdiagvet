@@ -48,26 +48,30 @@ export class ClientsService {
       },
     });
 
-    // Auto-create portal account for DISTRIBUTEUR or AGENT clients
-    if (input.segmentation === 'DISTRIBUTEUR' || input.segmentation === 'AGENT') {
-      await this.createPortalAccount(client.id, input.email, input.name, tenantId);
+    // Auto-create portal account for all client segmentations (DISTRIBUTEUR, AGENT, AUTRES)
+    if (input.segmentation === 'DISTRIBUTEUR' || input.segmentation === 'AGENT' || input.segmentation === 'AUTRES') {
+      await this.createPortalAccount(client.id, input.email, input.name, tenantId, input.segmentation);
     }
 
     return this.transformClientFilieres(client);
   }
 
-  private async createPortalAccount(clientId: string, email: string, clientName: string, tenantId: string) {
+  private async createPortalAccount(clientId: string, email: string, clientName: string, tenantId: string, segmentation: string) {
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
+    // Map segmentation to user role (AGENT and DISTRIBUTEUR both get DISTRIBUTEUR role for portal access)
+    const role = 'DISTRIBUTEUR' as const;
     
     if (existingUser) {
-      this.logger.log(`Portal account already exists for ${email} - resetting password and sending credentials email`);
-      // Reset password to client123 and set mustChangePassword
+      this.logger.log(`Portal account already exists for ${email} - resetting password, linking to client (role=${role}), and sending credentials email`);
+      // Reset password to client123, link to client, and set mustChangePassword
       const hashedPassword = await bcrypt.hash('client123', 10);
       await this.prisma.user.update({
         where: { email },
         data: { 
           passwordHash: hashedPassword,
           mustChangePassword: true,
+          clientId,
+          role,
         },
       });
       await this.emailService.sendPortalCredentials(email, clientName, 'client123');
@@ -87,7 +91,7 @@ export class ClientsService {
         passwordHash: hashedPassword,
         firstName,
         lastName,
-        role: 'DISTRIBUTEUR',
+        role,
         isActive: true,
         tenantId,
         clientId,

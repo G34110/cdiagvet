@@ -13,6 +13,12 @@ interface OrderLine {
   total: number;
 }
 
+interface Owner {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
 interface Order {
   id: string;
   reference: string;
@@ -25,6 +31,7 @@ interface Order {
   trackingNumber: string | null;
   createdAt: string;
   lines: OrderLine[];
+  owner?: Owner;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
@@ -44,6 +51,7 @@ export default function PortailCommandes() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [periodFilter, setPeriodFilter] = useState<string>('');
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
+  const [contributorFilter, setContributorFilter] = useState<string>('');
 
   const PERIOD_OPTIONS = [
     { value: '', label: 'Toutes les périodes' },
@@ -100,8 +108,17 @@ export default function PortailCommandes() {
       matchesDate = matchesDateStart && matchesDateEnd;
     }
     
-    return matchesSearch && matchesStatus && matchesDate;
+    const matchesContributor = !contributorFilter || order.owner?.id === contributorFilter;
+    return matchesSearch && matchesStatus && matchesDate && matchesContributor;
   });
+
+  // Get unique contributors for filter
+  const contributors = orders.reduce((acc, order) => {
+    if (order.owner && !acc.find(c => c.id === order.owner!.id)) {
+      acc.push(order.owner);
+    }
+    return acc;
+  }, [] as Owner[]);
 
   const toggleStatus = (status: string) => {
     setStatusFilters(prev =>
@@ -201,7 +218,22 @@ export default function PortailCommandes() {
             </div>
           )}
 
-          {(periodFilter || dateStart || dateEnd || searchTerm) && (
+          {contributors.length > 0 && (
+            <select
+              className="contributor-filter"
+              value={contributorFilter}
+              onChange={(e) => setContributorFilter(e.target.value)}
+            >
+              <option value="">Tous les contributeurs</option>
+              {contributors.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.firstName} {c.lastName}
+                </option>
+              ))}
+            </select>
+          )}
+
+          {(periodFilter || dateStart || dateEnd || searchTerm || contributorFilter) && (
             <button
               className="btn-clear-filters"
               onClick={() => {
@@ -209,6 +241,7 @@ export default function PortailCommandes() {
                 setDateStart('');
                 setDateEnd('');
                 setSearchTerm('');
+                setContributorFilter('');
               }}
             >
               <X size={16} />
@@ -255,6 +288,11 @@ export default function PortailCommandes() {
                   <div className="order-info">
                     <h3 className="order-reference">{order.reference}</h3>
                     <span className="order-date">{formatDate(order.createdAt)}</span>
+                    {order.owner && (
+                      <span className="order-contributor">
+                        Contributeur : {order.owner.firstName} {order.owner.lastName}
+                      </span>
+                    )}
                   </div>
                   <div
                     className="order-status"
