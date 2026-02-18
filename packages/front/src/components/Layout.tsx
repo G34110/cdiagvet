@@ -15,17 +15,19 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { useState } from 'react';
+import { usePlan } from '../contexts/PlanContext';
+import PlanSelector from './PlanSelector';
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/clients', icon: Users, label: 'Clients' },
-  { to: '/pipeline', icon: Target, label: 'Opportunités' },
-  { to: '/commandes', icon: ShoppingCart, label: 'Commandes' },
-  { to: '/products', icon: Package, label: 'Catalogue' },
-  { to: '/calendar', icon: Calendar, label: 'Calendrier' },
-  { to: '/map', icon: Map, label: 'Carte' },
-  { to: '/scanner', icon: ScanLine, label: 'Scanner' },
-  { to: '/traceability', icon: FileSearch, label: 'Traçabilité' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', menuId: 'dashboard' },
+  { to: '/clients', icon: Users, label: 'Clients', menuId: 'clients' },
+  { to: '/pipeline', icon: Target, label: 'Opportunités', menuId: 'opportunities' },
+  { to: '/commandes', icon: ShoppingCart, label: 'Commandes', menuId: 'orders' },
+  { to: '/products', icon: Package, label: 'Catalogue', menuId: 'products' },
+  { to: '/calendar', icon: Calendar, label: 'Calendrier', menuId: 'visits' },
+  { to: '/map', icon: Map, label: 'Carte', menuId: 'clients' },
+  { to: '/scanner', icon: ScanLine, label: 'Scanner', menuId: 'lots' },
+  { to: '/traceability', icon: FileSearch, label: 'Traçabilité', menuId: 'lots' },
 ];
 
 export default function Layout() {
@@ -34,6 +36,9 @@ export default function Layout() {
   const auth = useRecoilValue(authState);
   const navigate = useNavigate();
   const isProduction = import.meta.env.PROD;
+  const { isMenuVisible } = usePlan();
+
+  const visibleNavItems = navItems.filter(item => isMenuVisible(item.menuId));
 
   const handleLogout = () => {
     localStorage.removeItem('accessToken');
@@ -46,13 +51,23 @@ export default function Layout() {
     <div className="app-layout">
       <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
-          <h1 className="logo">CDiagVet</h1>
+          <div className="logo-container">
+            <h1 className="logo">CDiagVet</h1>
+            {sidebarOpen && (
+              <span className="app-version">v{__APP_VERSION__}</span>
+            )}
+          </div>
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="menu-toggle">
             <Menu size={20} />
           </button>
         </div>
+        {auth.user?.role === 'ADMIN' && sidebarOpen && (
+          <div className="plan-selector-container">
+            <PlanSelector userRole={auth.user?.role} />
+          </div>
+        )}
         <nav className="sidebar-nav">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}

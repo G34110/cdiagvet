@@ -1,6 +1,7 @@
 {
   "name": "@cdiagvet/front",
   "version": "0.1.0",
+  "versionFormat": "MAJOR.MINOR.PATCH.YYDDDHHmm (build auto: année+jour+heure+minute)",
   "description": "Frontend React - CRM Diagnostics Vétérinaires",
   "private": true,
   "type": "module",

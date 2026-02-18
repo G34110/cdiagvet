@@ -2,8 +2,23 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import pkg from './package.json';
+
+function generateBuildNumber(): string {
+  const now = new Date();
+  const year = now.getFullYear().toString().slice(-2);
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const diff = now.getTime() - startOfYear.getTime();
+  const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24)).toString().padStart(3, '0');
+  const hours = now.getHours().toString().padStart(2, '0');
+  const minutes = now.getMinutes().toString().padStart(2, '0');
+  return `${year}${dayOfYear}${hours}${minutes}`;
+}
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(`${pkg.version}.${generateBuildNumber()}`),
+  },
   plugins: [
     react(),
     VitePWA({

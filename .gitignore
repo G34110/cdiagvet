@@ -60,3 +60,6 @@ packages/server/uploads/*
 tmp/
 temp/
 .cache/
+
+# Documentation interne (contrats, pricing)
+docs/

@@ -1,6 +1,7 @@
 {
   "name": "cdiagvet",
   "version": "0.1.0",
+  "versionFormat": "MAJOR.MINOR.PATCH.YYDDDHHmm (build auto: année+jour+heure+minute)",
   "description": "CRM Diagnostics Vétérinaires - Gestion commerciale et traçabilité GS1.128",
   "private": true,
   "workspaces": [

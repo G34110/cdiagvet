@@ -1,0 +1,117 @@
+.plan-selector {
+  position: relative;
+}
+
+.plan-selector-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.875rem;
+}
+
+.plan-selector-button:hover {
+  background: #f8fafc;
+}
+
+.plan-label {
+  color: #64748b;
+}
+
+.plan-label strong {
+  font-weight: 600;
+}
+
+.chevron {
+  color: #94a3b8;
+  transition: transform 0.2s;
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+.plan-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 280px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.plan-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.plan-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.plan-option:hover {
+  background: #f8fafc;
+}
+
+.plan-option.active {
+  background: #eff6ff;
+}
+
+.plan-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 0.375rem;
+  color: white;
+  font-weight: 700;
+  font-size: 0.875rem;
+}
+
+.plan-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.plan-name {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.875rem;
+}
+
+.plan-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.plan-check {
+  color: #3B82F6;
+  font-weight: 700;
+}
