@@ -8,6 +8,7 @@ import {
   ShoppingCart, 
   ClipboardList, 
   User, 
+  Users,
   LogOut
 } from 'lucide-react';
 import './PortailLayout.css';
@@ -48,6 +49,10 @@ export default function PortailLayout() {
           <NavLink to="/portail/commandes" className={({ isActive }) => isActive ? 'active' : ''}>
             <ClipboardList size={18} />
             Mes commandes
+          </NavLink>
+          <NavLink to="/portail/contacts" className={({ isActive }) => isActive ? 'active' : ''}>
+            <Users size={18} />
+            Contacts
           </NavLink>
           <NavLink to="/portail/compte" className={({ isActive }) => isActive ? 'active' : ''}>
             <User size={18} />

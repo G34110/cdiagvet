@@ -160,8 +160,30 @@ model Client {
   orders        Order[]
   opportunities Opportunity[]
   distributeurs User[] @relation("DistributeurClient")
+  contacts      Contact[]
 
   @@map("clients")
+}
+
+// ============================================
+// CONTACTS (additionnels pour les clients)
+// ============================================
+
+model Contact {
+  id        String   @id @default(uuid())
+  firstName String   @map("first_name")
+  lastName  String   @map("last_name")
+  phone     String?
+  email     String?
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  clientId  String   @map("client_id")
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("contacts")
 }
 
 // ============================================

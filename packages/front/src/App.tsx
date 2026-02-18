@@ -23,6 +23,7 @@ import PortailCatalogue from './pages/portail/PortailCatalogue';
 import PortailPanier from './pages/portail/PortailPanier';
 import PortailCommandes from './pages/portail/PortailCommandes';
 import PortailCompte from './pages/portail/PortailCompte';
+import PortailContacts from './pages/portail/PortailContacts';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ForceChangePasswordPage from './pages/ForceChangePasswordPage';
 
@@ -84,6 +85,7 @@ function App() {
         <Route path="catalogue" element={<PortailCatalogue />} />
         <Route path="panier" element={<PortailPanier />} />
         <Route path="commandes" element={<PortailCommandes />} />
+        <Route path="contacts" element={<PortailContacts />} />
         <Route path="compte" element={<PortailCompte />} />
       </Route>
     </Routes>

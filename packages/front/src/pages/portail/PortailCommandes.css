@@ -443,6 +443,124 @@
   padding: 1.25rem;
 }
 
+/* Timeline des étapes */
+.order-timeline {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding: 1.5rem 1rem;
+  background: #f8fafc;
+  border-radius: 0.75rem;
+  position: relative;
+}
+
+.timeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 2px solid #e2e8f0;
+  color: #94a3b8;
+  transition: all 0.3s;
+}
+
+.timeline-step.completed .timeline-icon {
+  background: #10b981;
+  border-color: #10b981;
+  color: white;
+}
+
+.timeline-step.current .timeline-icon {
+  background: #1e40af;
+  border-color: #1e40af;
+  color: white;
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.2);
+}
+
+.timeline-step.pending .timeline-icon {
+  background: white;
+  border-color: #e2e8f0;
+  color: #cbd5e1;
+}
+
+.timeline-step.cancelled .timeline-icon {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #ef4444;
+}
+
+.timeline-connector {
+  position: absolute;
+  top: 20px;
+  left: calc(50% + 20px);
+  width: calc(100% - 40px);
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 0;
+}
+
+.timeline-connector.completed {
+  background: #10b981;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+.timeline-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.timeline-step.completed .timeline-label {
+  color: #10b981;
+}
+
+.timeline-step.current .timeline-label {
+  color: #1e40af;
+}
+
+.timeline-step.pending .timeline-label {
+  color: #cbd5e1;
+}
+
+.timeline-date {
+  font-size: 0.65rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+.order-cancelled-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+}
+
 .detail-status {
   display: flex;
   align-items: center;
@@ -614,5 +732,235 @@
 
   .order-total {
     text-align: left;
+  }
+}
+
+/* Statistics Section */
+.commandes-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-card > svg {
+  color: #1e40af;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.stat-card.top-products {
+  grid-column: span 2;
+}
+
+.top-products-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.top-products-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.top-products-list .rank {
+  font-weight: 600;
+  color: #1e40af;
+  min-width: 28px;
+}
+
+.top-products-list .name {
+  flex: 1;
+  color: #334155;
+}
+
+.top-products-list .count {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+/* Modal Actions */
+.modal-actions {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: center;
+}
+
+.btn-renew {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-renew:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 64, 175, 0.3);
+}
+
+/* Renewal Warning Modal */
+.renewal-modal {
+  max-width: 500px;
+}
+
+.warning-header {
+  background: #fef3c7;
+  border-bottom-color: #fcd34d;
+}
+
+.warning-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #92400e;
+}
+
+.renewal-intro {
+  margin: 0 0 1rem;
+  color: #475569;
+}
+
+.renewal-warnings-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.warning-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.warning-item.unavailable {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.warning-item.unavailable svg {
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.warning-item.price_changed {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.warning-item.price_changed svg {
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.renewal-note {
+  margin: 0 0 1.5rem;
+  padding: 0.75rem;
+  background: #f0f9ff;
+  border-radius: 0.5rem;
+  color: #0369a1;
+  font-size: 0.875rem;
+}
+
+.renewal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.renewal-actions .btn-secondary {
+  padding: 0.625rem 1.25rem;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  color: #64748b;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.renewal-actions .btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.renewal-actions .btn-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background: #1e40af;
+  border: none;
+  border-radius: 0.5rem;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.renewal-actions .btn-primary:hover {
+  background: #1e3a8a;
+}
+
+@media (max-width: 768px) {
+  .commandes-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card.top-products {
+    grid-column: span 1;
+  }
+
+  .renewal-actions {
+    flex-direction: column;
   }
 }

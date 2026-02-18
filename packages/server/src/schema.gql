@@ -99,6 +99,18 @@ type CommercialUser {
   lastName: String!
 }
 
+type Contact {
+  clientId: String!
+  createdAt: DateTime!
+  email: String
+  firstName: String!
+  id: ID!
+  isPrimary: Boolean!
+  lastName: String!
+  phone: String
+  updatedAt: DateTime!
+}
+
 input CreateClientInput {
   addressLine1: String
   addressLine2: String
@@ -112,6 +124,15 @@ input CreateClientInput {
   postalCode: String
   region: String
   segmentation: ClientSegmentation = AUTRES
+}
+
+input CreateContactInput {
+  clientId: String!
+  email: String
+  firstName: String!
+  isPrimary: Boolean = false
+  lastName: String!
+  phone: String
 }
 
 input CreateNoteInput {
@@ -281,6 +302,7 @@ type Mutation {
   """Convertit une opportunité gagnée en commande"""
   convertOpportunityToOrder(opportunityId: String!): Order!
   createClient(input: CreateClientInput!): Client!
+  createContact(input: CreateContactInput!): Contact!
   createNote(input: CreateNoteInput!): Note!
   createOpportunity(input: CreateOpportunityInput!): Opportunity!
   createOrder(input: CreateOrderInput!): Order!
@@ -290,6 +312,7 @@ type Mutation {
   createVisit(input: CreateVisitInput!): Visit!
   deleteAllClients: Int!
   deleteClient(id: String!): Client!
+  deleteContact(id: String!): Contact!
   deleteNote(id: String!): Note!
   deleteOpportunity(id: String!): Opportunity!
   deleteOrder(id: String!): Boolean!
@@ -304,6 +327,7 @@ type Mutation {
   resetPassword(input: ResetPasswordInput!): ResetPasswordPayload!
   scanBarcode(input: ScanBarcodeInput!): ScanResult!
   updateClient(id: String!, input: UpdateClientInput!): Client!
+  updateContact(id: String!, input: UpdateContactInput!): Contact!
   updateNote(id: String!, input: UpdateNoteInput!): Note!
   updateOpportunity(input: UpdateOpportunityInput!): Opportunity!
   updateOpportunityLine(lineId: String!, quantity: Int!): Opportunity!
@@ -539,6 +563,7 @@ type Query {
   allFilieres: [Filiere!]!
   allLots(search: String): [Lot!]!
   client(id: String!): Client!
+  clientContacts(clientId: String!): [Contact!]!
   clientLots(clientId: ID!): [LotClient!]!
   clientNotes(clientId: String!): [Note!]!
   clientPhotos(clientId: String!): [Photo!]!
@@ -547,12 +572,14 @@ type Query {
   clients(filter: ClientsFilterInput): ClientsResponse!
   clientsForMap: [ClientMapItem!]!
   commercialsForAssignment: [CommercialUser!]!
+  contact(id: String!): Contact
   dashboardData(filter: DashboardFilterInput): DashboardData!
   filieres: [Filiere!]!
   lot(id: ID!): Lot
   lotTraceability(lotId: ID!): LotTraceability!
   me: User!
   myClients(filter: ClientsFilterInput): [Client!]!
+  myContacts: [Contact!]!
   myVisits(filter: VisitsFilterInput): [Visit!]!
   note(id: String!): Note!
   opportunities: [Opportunity!]!
@@ -634,6 +661,14 @@ input UpdateClientInput {
   postalCode: String
   region: String
   segmentation: ClientSegmentation = AUTRES
+}
+
+input UpdateContactInput {
+  email: String
+  firstName: String
+  isPrimary: Boolean
+  lastName: String
+  phone: String
 }
 
 input UpdateNoteInput {
