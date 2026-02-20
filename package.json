@@ -20,12 +20,12 @@
     "db:seed": "npm run db:seed --workspace=@cdiagvet/server"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=18.0.0"
   },
   "author": "Gille",
   "license": "UNLICENSED",
   "dependencies": {
-    "@prisma/client": "^7.4.1",
-    "prisma": "^7.4.1"
+    "@prisma/client": "^5.8.0",
+    "prisma": "^5.8.0"
   }
 }
