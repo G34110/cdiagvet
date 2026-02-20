@@ -442,13 +442,13 @@ export class ClientsService {
 
   async deleteAll(tenantId: string): Promise<number> {
     // Delete in transaction with all dependent records
-    const result = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx: any) => {
       // Get all client IDs for this tenant
       const clients = await tx.client.findMany({
         where: { tenantId },
         select: { id: true },
       });
-      const clientIds = clients.map(c => c.id);
+      const clientIds = clients.map((c: { id: string }) => c.id);
       
       if (clientIds.length === 0) return 0;
 

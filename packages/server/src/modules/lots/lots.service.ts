@@ -131,12 +131,12 @@ export class LotsService {
       orderBy: { deliveryDate: 'desc' },
     });
 
-    const totalQuantity = deliveries.reduce((sum, d) => sum + d.quantity, 0);
-    const clientCount = new Set(deliveries.map(d => d.clientId)).size;
+    const totalQuantity = deliveries.reduce((sum: number, d: any) => sum + d.quantity, 0);
+    const clientCount = new Set(deliveries.map((d: any) => d.clientId)).size;
 
     return {
       lot,
-      deliveries: deliveries.map(d => ({
+      deliveries: deliveries.map((d: any) => ({
         ...d,
         clientName: d.client.name,
         clientAddress: d.client.addressLine1,
@@ -172,7 +172,7 @@ export class LotsService {
       orderBy: { deliveryDate: 'desc' },
     });
 
-    return lotClients.map(lc => ({
+    return lotClients.map((lc: any) => ({
       ...lc,
       clientName: undefined,
     }));

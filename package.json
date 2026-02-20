@@ -23,5 +23,9 @@
     "node": ">=20.0.0"
   },
   "author": "Gille",
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@prisma/client": "^7.4.1",
+    "prisma": "^7.4.1"
+  }
 }

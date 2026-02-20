@@ -70,10 +70,10 @@ export class OpportunitiesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return opportunities.map(opp => ({
+    return opportunities.map((opp: any) => ({
       ...opp,
       weightedAmount: opp.amount * (opp.probability / 100),
-      lines: opp.lines.map(line => ({
+      lines: opp.lines.map((line: any) => ({
         ...line,
         total: line.quantity * line.unitPrice,
       })),
@@ -96,10 +96,10 @@ export class OpportunitiesService {
       orderBy: { expectedCloseDate: 'asc' },
     });
 
-    return opportunities.map(opp => ({
+    return opportunities.map((opp: any) => ({
       ...opp,
       weightedAmount: opp.amount * (opp.probability / 100),
-      lines: opp.lines.map(line => ({
+      lines: opp.lines.map((line: any) => ({
         ...line,
         total: line.quantity * line.unitPrice,
       })),
@@ -155,7 +155,7 @@ export class OpportunitiesService {
     return {
       ...opportunity,
       weightedAmount: opportunity.amount * (opportunity.probability / 100),
-      lines: opportunity.lines.map(line => ({
+      lines: opportunity.lines.map((line: any) => ({
         ...line,
         total: line.quantity * line.unitPrice,
       })),
@@ -336,9 +336,9 @@ export class OpportunitiesService {
       },
     });
 
-    const totalPipeline = opportunities.reduce((sum, opp) => sum + opp.amount, 0);
+    const totalPipeline = opportunities.reduce((sum: number, opp: any) => sum + opp.amount, 0);
     const weightedPipeline = opportunities.reduce(
-      (sum, opp) => sum + opp.amount * (opp.probability / 100),
+      (sum: number, opp: any) => sum + opp.amount * (opp.probability / 100),
       0,
     );
 
@@ -489,7 +489,7 @@ export class OpportunitiesService {
       where: { opportunityId },
     });
 
-    const linesTotal = lines.reduce((sum, line) => sum + (line.quantity * line.unitPrice), 0);
+    const linesTotal = lines.reduce((sum: number, line: any) => sum + (line.quantity * line.unitPrice), 0);
     // Ensure manualAmount is a proper number (raw query may return Decimal)
     const manualAmount = Number(opportunity?.[0]?.manualAmount) || 0;
     const totalAmount = manualAmount + linesTotal;
@@ -672,7 +672,7 @@ export class OpportunitiesService {
     }
 
     // Prepare lines for order
-    const orderLines = opportunity.lines.map(line => ({
+    const orderLines = opportunity.lines.map((line: any) => ({
       productName: line.productName,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
@@ -721,7 +721,7 @@ export class OpportunitiesService {
     ]);
 
     return {
-      events: events.map(e => ({
+      events: events.map((e: any) => ({
         ...e,
         metadata: e.metadata ? JSON.stringify(e.metadata) : null,
       })),
@@ -776,7 +776,7 @@ export class OpportunitiesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return events.map(e => ({
+    return events.map((e: any) => ({
       ...e,
       metadata: e.metadata ? JSON.stringify(e.metadata) : null,
     }));
