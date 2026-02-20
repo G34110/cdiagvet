@@ -8,4 +8,4 @@ cmds = ["npm ci"]
 cmds = ["cd packages/server && npm install && npx prisma generate && npm run build"]
 
 [start]
-cmd = "cd packages/server && npx prisma migrate deploy && node dist/main.js"
+cmd = "cd packages/server && npx prisma migrate deploy && node dist/main"
