@@ -20,7 +20,7 @@
     "db:seed": "npm run db:seed --workspace=@cdiagvet/server"
   },
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=22.12.0"
   },
   "author": "Gille",
   "license": "UNLICENSED",
