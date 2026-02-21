@@ -1,8 +1,10 @@
 // Tout en haut du fichier, avant les imports
-console.log('Current directory:', process.cwd());
+console.log('=== DEBUG STARTUP ===');
+console.log('process.cwd():', process.cwd());
 console.log('__dirname:', __dirname);
 console.log('Files in current dir:', require('fs').readdirSync('.'));
-console.log('Files in dist:', require('fs').readdirSync('./dist').slice(0,5));
+console.log('Files in ./dist:', require('fs').existsSync('./dist') ? require('fs').readdirSync('./dist') : 'dist folder not found');
+console.log('=== END DEBUG ===\n');
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
