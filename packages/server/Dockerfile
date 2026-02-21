@@ -3,9 +3,9 @@
 # Simplified single-stage build
 # =============================================================================
 
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
-RUN apk add --no-cache openssl libc6-compat
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -30,10 +30,9 @@ RUN echo "=== BUILD OUTPUT ===" && ls -la dist/
 # -----------------------------------------------------------------------------
 # Stage 2: Production
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 
-# Install OpenSSL 1.1 compatibility for Prisma
-RUN apk add --no-cache openssl1.1-compat libc6-compat
+RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
 
 LABEL maintainer="Gille"
 LABEL description="CDiagVet API Server - NestJS + GraphQL + Prisma"
@@ -63,9 +62,9 @@ RUN chmod +x /start.sh
 # Créer les dossiers nécessaires
 RUN mkdir -p /app/uploads
 
-# Utilisateur non-root
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nestjs -u 1001 -G nodejs && \
+# Utilisateur non-root (Debian syntax)
+RUN groupadd -g 1001 nodejs && \
+    useradd -u 1001 -g nodejs nestjs && \
     chown -R nestjs:nodejs /app /start.sh
 
 USER nestjs
