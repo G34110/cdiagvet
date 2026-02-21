@@ -1,3 +1,9 @@
+// Tout en haut du fichier, avant les imports
+console.log('Current directory:', process.cwd());
+console.log('__dirname:', __dirname);
+console.log('Files in current dir:', require('fs').readdirSync('.'));
+console.log('Files in dist:', require('fs').readdirSync('./dist').slice(0,5));
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
