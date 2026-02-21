@@ -1,93 +1,68 @@
 # =============================================================================
-# Dockerfile - @cdiagvet/server (NestJS + Prisma + GraphQL)
-# Multi-stage build pour optimiser la taille de l'image
+# Dockerfile - Version simplifiée et robuste
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# Stage 1: Dependencies
-# -----------------------------------------------------------------------------
-FROM node:20-alpine AS deps
-
-WORKDIR /app
-
-# Copier les fichiers de dépendances
-COPY package.json package-lock.json* ./
-COPY packages/server/package.json ./packages/server/
-
-# Installer les dépendances (incluant devDependencies pour le build)
-RUN npm ci --workspace=@cdiagvet/server
-
-# -----------------------------------------------------------------------------
-# Stage 2: Builder
-# -----------------------------------------------------------------------------
+# Stage 1: Builder
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copier node_modules depuis deps
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/server/node_modules ./packages/server/node_modules
-
-# Copier le code source
+# Copier tous les fichiers nécessaires
+COPY package*.json ./
+COPY packages/server/package*.json ./packages/server/
 COPY packages/server ./packages/server
-COPY package.json ./
 
-# Générer le client Prisma
+# Installer toutes les dépendances
+RUN npm ci
+
+# Générer Prisma client
 WORKDIR /app/packages/server
 RUN npx prisma generate
 
-# Build NestJS
-RUN npm run build
+# Build NestJS - forçons la sortie dans /app/dist
+RUN npm run build && \
+    mkdir -p /app/dist && \
+    cp -r dist/* /app/dist/ 2>/dev/null || true && \
+    echo "Build terminé. Contenu de /app/packages/server/dist:" && \
+    ls -la /app/packages/server/dist
 
-# -----------------------------------------------------------------------------
-# Stage 3: Production - VERSION DEBUG
-# -----------------------------------------------------------------------------
-FROM node:20-alpine AS production
-
-LABEL maintainer="Gille"
-LABEL description="CDiagVet API Server - NestJS + GraphQL + Prisma"
+# Stage 2: Production
+FROM node:20-alpine
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
 WORKDIR /app
 
-# 1. Copier le package.json
-COPY packages/server/package.json ./
-
-# 2. Installer les dépendances
-RUN npm install --omit=dev
-
-# 3. Copier Prisma et générer
-COPY packages/server/prisma ./prisma
-RUN npx prisma generate
-
-# 4. Copier le build et DEBUG INTENSIF
+# Copier le build depuis le builder - en prenant tout
 COPY --from=builder /app/packages/server/dist ./dist
+COPY --from=builder /app/packages/server/package.json ./
+COPY --from=builder /app/packages/server/prisma ./prisma
+COPY --from=builder /app/packages/server/node_modules/@prisma/client ./node_modules/@prisma/client
 
-# 5. VÉRIFICATION DÉTAILLÉE
-RUN echo "=== VÉRIFICATION COMPLÈTE DU BUILD ===" && \
-    echo "1. Contenu de /app:" && \
-    ls -la /app && \
-    echo "\n2. Contenu de /app/dist (si existe):" && \
-    (ls -la /app/dist 2>/dev/null || echo "❌ /app/dist n'existe pas!") && \
-    echo "\n3. Recherche de tous les fichiers main.js:" && \
-    find /app -name "main.js" 2>/dev/null || echo "Aucun main.js trouvé!" && \
-    echo "\n4. Vérification du dossier builder:" && \
-    echo "Contenu de /app/packages/server/dist dans builder (simulé):" && \
-    echo "Le build a-t-il bien fonctionné?"
+# Installer les dépendances de production
+RUN npm install --omit=dev && \
+    npx prisma generate
 
-# 6. Créer les dossiers nécessaires
-RUN mkdir -p /app/uploads
+# Vérification finale
+RUN echo "=== VÉRIFICATION FINALE ===" && \
+    ls -la && \
+    ls -la dist/ && \
+    test -f dist/main.js || (echo "❌ TOUJOURS PAS DE MAIN.JS!" && exit 1)
 
-# 7. Utilisateur non-root
+# Créer l'utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001 -G nodejs && \
+    mkdir -p /app/uploads && \
     chown -R nestjs:nodejs /app
 
 USER nestjs
 
 EXPOSE 3000
 
-# 8. Commande de démarrage avec vérification runtime
-CMD ["sh", "-c", "echo '=== RUNTIME DEBUG ===' && pwd && ls -la && ls -la dist/ && node dist/main.js"]
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+# Démarrer l'application
+CMD ["node", "dist/main.js"]
