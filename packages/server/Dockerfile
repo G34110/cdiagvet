@@ -1,43 +1,31 @@
 # =============================================================================
 # Dockerfile - @cdiagvet/server (NestJS + Prisma + GraphQL)
-# Multi-stage build pour optimiser la taille de l'image
+# Simplified single-stage build
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# Stage 1: Dependencies
-# -----------------------------------------------------------------------------
-FROM node:20-alpine AS deps
-
-WORKDIR /app
-
-# Copier les fichiers de dépendances
-COPY package.json package-lock.json* ./
-COPY packages/server/package.json ./packages/server/
-
-# Installer les dépendances (incluant devDependencies pour le build)
-RUN npm ci --workspace=@cdiagvet/server
-
-# -----------------------------------------------------------------------------
-# Stage 2: Builder
-# -----------------------------------------------------------------------------
 FROM node:20-alpine AS builder
 
+RUN apk add --no-cache openssl libc6-compat
+
 WORKDIR /app
 
-# Copier node_modules depuis deps
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/server/node_modules ./packages/server/node_modules
+# Copy only server package files
+COPY packages/server/package*.json ./
 
-# Copier le code source
-COPY packages/server ./packages/server
-COPY package.json ./
+# Install ALL dependencies (need devDeps for build)
+RUN npm install
 
-# Générer le client Prisma
-WORKDIR /app/packages/server
+# Copy source code
+COPY packages/server/ ./
+
+# Generate Prisma client
 RUN npx prisma generate
 
 # Build NestJS
 RUN npm run build
+
+# Verify build output
+RUN echo "=== BUILD OUTPUT ===" && ls -la dist/
 
 # -----------------------------------------------------------------------------
 # Stage 3: Production - ULTIME VERSION
@@ -62,8 +50,8 @@ RUN npm install --omit=dev
 COPY packages/server/prisma ./prisma
 RUN npx prisma generate
 
-# Copier le build
-COPY --from=builder /app/packages/server/dist ./dist
+# Copier le build (builder workdir is /app, dist is at /app/dist)
+COPY --from=builder /app/dist ./dist
 
 # Copier le script de démarrage
 COPY packages/server/start.sh /start.sh
