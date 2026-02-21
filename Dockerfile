@@ -8,17 +8,20 @@ WORKDIR /app
 # Copy all server files
 COPY packages/server/ ./
 
-# Install dependencies
+# Install dependencies (including devDependencies for build)
 RUN npm install
 
 # Generate Prisma client
 RUN npx prisma generate
 
-# Build the app and show output
-RUN npm run build && echo "=== Build complete ===" && ls -la && ls -la dist/
+# Build the app
+RUN npm run build
+
+# Debug: verify dist exists after build
+RUN echo "=== Contents of /app ===" && ls -la && echo "=== Contents of /app/dist ===" && ls -la dist/
 
 # Expose port
 EXPOSE 3000
 
-# Start command
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+# Start command - use npm start instead of node directly
+CMD ["sh", "-c", "echo '=== Starting ===' && ls -la && ls -la dist/ && npx prisma migrate deploy && npm start"]
