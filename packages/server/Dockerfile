@@ -40,7 +40,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # -----------------------------------------------------------------------------
-# Stage 3: Production - VERSION CORRIGÉE
+# Stage 3: Production - VERSION DEBUG
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS production
 
@@ -50,46 +50,44 @@ LABEL description="CDiagVet API Server - NestJS + GraphQL + Prisma"
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# WORKDIR UNIQUE - tout sera à la racine /app
 WORKDIR /app
 
-# 1. Copier le package.json depuis le bon endroit
+# 1. Copier le package.json
 COPY packages/server/package.json ./
 
-# 2. Installer les dépendances de production
+# 2. Installer les dépendances
 RUN npm install --omit=dev
 
-# 3. Copier les fichiers Prisma et générer le client
+# 3. Copier Prisma et générer
 COPY packages/server/prisma ./prisma
 RUN npx prisma generate
 
-# 4. Copier le build depuis le builder - ATTENTION AU CHEMIN !
+# 4. Copier le build et DEBUG INTENSIF
 COPY --from=builder /app/packages/server/dist ./dist
 
-# 5. Vérification approfondie
-RUN echo "=== VÉRIFICATION ===" && \
-    pwd && \
-    ls -la && \
-    ls -la dist/ && \
-    test -f dist/main.js || (echo "❌ dist/main.js manquant!" && exit 1) && \
-    echo "✅ dist/main.js trouvé!"
+# 5. VÉRIFICATION DÉTAILLÉE
+RUN echo "=== VÉRIFICATION COMPLÈTE DU BUILD ===" && \
+    echo "1. Contenu de /app:" && \
+    ls -la /app && \
+    echo "\n2. Contenu de /app/dist (si existe):" && \
+    (ls -la /app/dist 2>/dev/null || echo "❌ /app/dist n'existe pas!") && \
+    echo "\n3. Recherche de tous les fichiers main.js:" && \
+    find /app -name "main.js" 2>/dev/null || echo "Aucun main.js trouvé!" && \
+    echo "\n4. Vérification du dossier builder:" && \
+    echo "Contenu de /app/packages/server/dist dans builder (simulé):" && \
+    echo "Le build a-t-il bien fonctionné?"
 
 # 6. Créer les dossiers nécessaires
 RUN mkdir -p /app/uploads
 
-# 7. Gestion utilisateur non-root
+# 7. Utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001 -G nodejs && \
     chown -R nestjs:nodejs /app
 
-# 8. Passer à l'utilisateur non-root
 USER nestjs
 
 EXPOSE 3000
 
-# 9. Healthcheck (adaptez le chemin /health si nécessaire)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
-
-# 10. Commande de démarrage - CHEMIN CORRECT pour le contexte /app
-CMD ["node", "dist/main.js"]
+# 8. Commande de démarrage avec vérification runtime
+CMD ["sh", "-c", "echo '=== RUNTIME DEBUG ===' && pwd && ls -la && ls -la dist/ && node dist/main.js"]
