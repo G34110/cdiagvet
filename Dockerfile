@@ -1,27 +1,36 @@
-FROM node:22-alpine
+# Stage 1: Build
+FROM node:22-alpine AS builder
 
-# Install OpenSSL for Prisma
 RUN apk add --no-cache openssl openssl-dev libc6-compat
 
 WORKDIR /app
 
-# Copy all server files
 COPY packages/server/ ./
 
-# Install dependencies (including devDependencies for build)
 RUN npm install
-
-# Generate Prisma client
 RUN npx prisma generate
-
-# Build the app
 RUN npm run build
+RUN ls -la dist/
 
-# Debug: verify dist exists after build
-RUN echo "=== Contents of /app ===" && ls -la && echo "=== Contents of /app/dist ===" && ls -la dist/
+# Stage 2: Production
+FROM node:22-alpine
 
-# Expose port
+RUN apk add --no-cache openssl openssl-dev libc6-compat
+
+WORKDIR /app
+
+# Copy package files and install production deps
+COPY packages/server/package*.json ./
+RUN npm install --omit=dev
+
+# Copy prisma schema and generated client
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+
 EXPOSE 3000
 
-# Start command - use npm start instead of node directly
-CMD ["sh", "-c", "echo '=== Starting ===' && ls -la && ls -la dist/ && npx prisma migrate deploy && npm start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
