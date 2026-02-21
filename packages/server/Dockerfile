@@ -28,9 +28,12 @@ RUN npm run build
 RUN echo "=== BUILD OUTPUT ===" && ls -la dist/
 
 # -----------------------------------------------------------------------------
-# Stage 3: Production - ULTIME VERSION
+# Stage 2: Production
 # -----------------------------------------------------------------------------
 FROM node:20-alpine AS production
+
+# Install OpenSSL 1.1 compatibility for Prisma
+RUN apk add --no-cache openssl1.1-compat libc6-compat
 
 LABEL maintainer="Gille"
 LABEL description="CDiagVet API Server - NestJS + GraphQL + Prisma"
