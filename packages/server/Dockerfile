@@ -1,68 +1,85 @@
 # =============================================================================
-# Dockerfile - Version simplifiée et robuste
+# Dockerfile - @cdiagvet/server (NestJS + Prisma + GraphQL)
+# Multi-stage build pour optimiser la taille de l'image
 # =============================================================================
 
-# Stage 1: Builder
+# -----------------------------------------------------------------------------
+# Stage 1: Dependencies
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY package.json package-lock.json* ./
+COPY packages/server/package.json ./packages/server/
+
+# Installer les dépendances (incluant devDependencies pour le build)
+RUN npm ci --workspace=@cdiagvet/server
+
+# -----------------------------------------------------------------------------
+# Stage 2: Builder
+# -----------------------------------------------------------------------------
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copier tous les fichiers nécessaires
-COPY package*.json ./
-COPY packages/server/package*.json ./packages/server/
+# Copier node_modules depuis deps
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages/server/node_modules ./packages/server/node_modules
+
+# Copier le code source
 COPY packages/server ./packages/server
+COPY package.json ./
 
-# Installer toutes les dépendances
-RUN npm ci
-
-# Générer Prisma client
+# Générer le client Prisma
 WORKDIR /app/packages/server
 RUN npx prisma generate
 
-# Build NestJS - forçons la sortie dans /app/dist
-RUN npm run build && \
-    mkdir -p /app/dist && \
-    cp -r dist/* /app/dist/ 2>/dev/null || true && \
-    echo "Build terminé. Contenu de /app/packages/server/dist:" && \
-    ls -la /app/packages/server/dist
+# Build NestJS
+RUN npm run build
 
-# Stage 2: Production
-FROM node:20-alpine
+# -----------------------------------------------------------------------------
+# Stage 3: Production - ULTIME VERSION
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS production
+
+LABEL maintainer="Gille"
+LABEL description="CDiagVet API Server - NestJS + GraphQL + Prisma"
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
 WORKDIR /app
 
-# Copier le build depuis le builder - en prenant tout
+# Copier le package.json
+COPY packages/server/package.json ./
+
+# Installer les dépendances
+RUN npm install --omit=dev
+
+# Copier Prisma et générer
+COPY packages/server/prisma ./prisma
+RUN npx prisma generate
+
+# Copier le build
 COPY --from=builder /app/packages/server/dist ./dist
-COPY --from=builder /app/packages/server/package.json ./
-COPY --from=builder /app/packages/server/prisma ./prisma
-COPY --from=builder /app/packages/server/node_modules/@prisma/client ./node_modules/@prisma/client
 
-# Installer les dépendances de production
-RUN npm install --omit=dev && \
-    npx prisma generate
+# Copier le script de démarrage
+COPY packages/server/start.sh /start.sh
+RUN chmod +x /start.sh
 
-# Vérification finale
-RUN echo "=== VÉRIFICATION FINALE ===" && \
-    ls -la && \
-    ls -la dist/ && \
-    test -f dist/main.js || (echo "❌ TOUJOURS PAS DE MAIN.JS!" && exit 1)
+# Créer les dossiers nécessaires
+RUN mkdir -p /app/uploads
 
-# Créer l'utilisateur non-root
+# Utilisateur non-root
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nestjs -u 1001 -G nodejs && \
-    mkdir -p /app/uploads && \
-    chown -R nestjs:nodejs /app
+    chown -R nestjs:nodejs /app /start.sh
 
 USER nestjs
 
 EXPOSE 3000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
-
-# Démarrer l'application
-CMD ["node", "dist/main.js"]
+# Utiliser le script de démarrage
+CMD ["/start.sh"]
