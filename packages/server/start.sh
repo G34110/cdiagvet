@@ -36,17 +36,15 @@ echo "=========================================="
 echo "🚀 TENTATIVE DE LANCEMENT"
 echo "=========================================="
 
-# Essayer différents chemins possibles
-if [ -f "/app/dist/main.js" ]; then
+# NestJS build preserves src/ structure, so main.js is in dist/src/
+if [ -f "/app/dist/src/main.js" ]; then
+    echo "✅ Lancement: node /app/dist/src/main.js"
+    exec node /app/dist/src/main.js
+elif [ -f "/app/dist/main.js" ]; then
     echo "✅ Lancement: node /app/dist/main.js"
     exec node /app/dist/main.js
-elif [ -f "/app/packages/server/dist/main.js" ]; then
-    echo "✅ Lancement: node /app/packages/server/dist/main.js"
-    exec node /app/packages/server/dist/main.js
-elif [ -f "./dist/main.js" ]; then
-    echo "✅ Lancement: node ./dist/main.js"
-    exec node ./dist/main.js
 else
     echo "❌ Impossible de trouver main.js!"
+    find /app -name "main.js" 2>/dev/null
     exit 1
 fi
